@@ -8,7 +8,9 @@ function opcode($pos, &$program) {
     $code = $program[$pos];
 
     if ($code == 99) {
-        echo "$pos | EXIT\n";
+        if ($verbose) {
+            echo "$pos | EXIT\n";
+        }
         return 0;
     }
 
@@ -37,10 +39,12 @@ function opcode($pos, &$program) {
         $ret = 0;
     }
 
-    echo "$pos | $cmd"
-       . " ($src0: " . $val0 . ")"
-       . " ($src1: " . $val1 . ")"
-       . " ($dst: " . $program[$dst] . ")\n";
+    if ($verbose) {
+        echo "$pos | $cmd"
+           . " ($src0: " . $val0 . ")"
+           . " ($src1: " . $val1 . ")"
+           . " ($dst: " . $program[$dst] . ")\n";
+    }
 
     // either opcode 99 (exit), or unknown opecode
     return $ret;
@@ -61,7 +65,7 @@ function intcode($sourceCode, $patch = []) {
         $pos += 4;
     }
 
-    return implode(",", $program);
+    return $program[0];
 }
 
 $testPrograms = [
@@ -84,5 +88,16 @@ echo "Running real input...\n";
 $program = trim(file_get_contents("day-2-input.txt"));
 $output = intcode($program, [null, 12, 2]);
 echo $output."\n";
+
+foreach (range(0, 99) as $noun) {
+    foreach (range(0, 99) as $verb) {
+
+        $output = intcode($program, [null, $noun, $verb]);
+
+        if ($output == 19690720) {
+            echo "noun: $noun, verb: $verb, result: " . (100 * $noun + $verb) . "\n";
+        }
+    }
+}
 
 echo "Done.\n";
