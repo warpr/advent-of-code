@@ -3,7 +3,7 @@
 function offset(&$lines, $offset)
 {
     for ($i = 0; $i < $offset; $i++) {
-        yield "";
+        yield '';
     }
 
     foreach ($lines as $line) {
@@ -33,7 +33,7 @@ function zip($arrays)
 function is_window_complete($window)
 {
     foreach ($window as $value) {
-        if ($value === null || $value === "") {
+        if ($value === null || $value === '') {
             return false;
         }
     }
@@ -59,17 +59,13 @@ function sum_window($windows)
 
 function run($filename)
 {
-    $lines = array_map("trim", file($filename));
+    $lines = array_map('trim', file($filename));
 
     $prev = array_shift($lines);
     $inc = 0;
 
     foreach (
-        sum_window(
-            complete_windows(
-                zip([offset($lines, 2), offset($lines, 1), offset($lines, 0)])
-            )
-        )
+        sum_window(complete_windows(zip([offset($lines, 2), offset($lines, 1), offset($lines, 0)])))
         as $current
     ) {
         if ($current > $prev) {
@@ -82,11 +78,11 @@ function run($filename)
     return $inc;
 }
 
-$result = run("star-01-example.txt");
+$result = run('star-01-example.txt');
 if ($result !== 5) {
     echo "You broke the example.\n";
 }
 
-$output = run("star-01-input.txt");
+$output = run('star-01-input.txt');
 
 echo "The answer is:  $output\n";

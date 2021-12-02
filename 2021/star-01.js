@@ -17,7 +17,7 @@ function* zip(lists) {
     const first = lists.shift();
 
     for (const [idx, item] of first.entries()) {
-        const pair = [ item ];
+        const pair = [item];
         for (const l of lists) {
             pair.push(l.at(idx));
         }
@@ -29,10 +29,13 @@ function* zip(lists) {
 }
 
 function main(filename) {
-    const values = Deno.readTextFileSync(filename).split("\n").map(line => line.trim()).filter(line => line !== '');
+    const values = Deno.readTextFileSync(filename)
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line !== '');
 
     let increases = 0;
-    for (const pair of zip([ offset(values, 1), values ])) {
+    for (const pair of zip([offset(values, 1), values])) {
         if (pair[0] < pair[1]) {
             increases++;
         }
@@ -41,11 +44,11 @@ function main(filename) {
     return increases;
 }
 
-const result = main("star-01-example.txt");
+const result = main('star-01-example.txt');
 if (result !== 7) {
-    console.log("You broke the example.");
+    console.log('You broke the example.');
 }
 
-const output = main("star-01-input.txt");
+const output = main('star-01-input.txt');
 
 console.log('Answer is: ', output);
