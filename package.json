@@ -1,0 +1,33 @@
+{
+  "name": "advent-of-code",
+  "version": "2021.0.1",
+  "description": "Advent of Code",
+  "lint-staged": {
+    "*.php": [
+      "prettier --write"
+    ],
+    "*.json": [
+      "prettier --write"
+    ],
+    "*.js": [
+      "prettier --write"
+    ],
+    "*.mjs": [
+      "prettier --write"
+    ]
+  },
+  "author": "Kuno Woudt <kuno@frob.nl>",
+  "license": "copyleft-next-0.3.1",
+  "repository": "https://github.com/warpr/advent-of-code.git",
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "devDependencies": {
+    "@prettier/plugin-php": "^0.17.5",
+    "husky": "^7.0.4",
+    "lint-staged": "^11.2.6",
+    "prettier": "^2.4.1"
+  }
+}
