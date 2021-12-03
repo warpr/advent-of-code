@@ -1,6 +1,7 @@
 <?php
 
-function oxygen_criteria($numbers, $bitpos) {
+function oxygen_criteria($numbers, $bitpos)
+{
     $ones = 0;
     $zeroes = 0;
 
@@ -17,10 +18,11 @@ function oxygen_criteria($numbers, $bitpos) {
         }
     }
 
-    return ($zeroes > $ones) ? $group_zeroes : $group_ones;
+    return $zeroes > $ones ? $group_zeroes : $group_ones;
 }
 
-function co2_scrubber($numbers, $bitpos) {
+function co2_scrubber($numbers, $bitpos)
+{
     $ones = 0;
     $zeroes = 0;
 
@@ -37,7 +39,7 @@ function co2_scrubber($numbers, $bitpos) {
         }
     }
 
-    return ($zeroes <= $ones) ? $group_zeroes : $group_ones;
+    return $zeroes <= $ones ? $group_zeroes : $group_ones;
 }
 
 function run($filename)
@@ -62,20 +64,19 @@ function run($filename)
             $final_oxygen = array_pop($oxygen_numbers);
         }
 
-            $co2_numbers = co2_scrubber($co2_numbers, $pos);
+        $co2_numbers = co2_scrubber($co2_numbers, $pos);
         if (count($co2_numbers) === 1) {
             $final_co2 = array_pop($co2_numbers);
         }
     }
 
-    $int_oxygen = bindec(implode("", $final_oxygen));
-    $int_co2 = bindec(implode("", $final_co2));
+    $int_oxygen = bindec(implode('', $final_oxygen));
+    $int_co2 = bindec(implode('', $final_co2));
 
     // print_r(compact('final_oxygen', 'final_co2', 'int_oxygen', 'int_co2'));
 
     return $int_oxygen * $int_co2;
 }
-
 
 $result = run('star-05-example.txt');
 if ($result !== 230) {
@@ -86,4 +87,3 @@ if ($result !== 230) {
 $output = run('star-05-input.txt');
 
 echo "The answer is:  $output\n";
-

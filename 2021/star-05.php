@@ -28,11 +28,10 @@ function run($filename)
     $int_gamma = bindec($final_gamma);
     $int_epsilon = bindec($final_epsilon);
 
-    print_r(compact('final_gamma', 'final_epsilon', 'int_gamma', 'int_epsilon'));
+    // print_r(compact('final_gamma', 'final_epsilon', 'int_gamma', 'int_epsilon'));
 
     return $int_gamma * $int_epsilon;
 }
-
 
 $result = run('star-05-example.txt');
 if ($result !== 198) {
@@ -43,4 +42,3 @@ if ($result !== 198) {
 $output = run('star-05-input.txt');
 
 echo "The answer is:  $output\n";
-
