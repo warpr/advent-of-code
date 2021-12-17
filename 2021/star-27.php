@@ -1,18 +1,21 @@
 <?php
 
-function parse_pair($line) {
-    list($input, $insert) = explode(" -> ", $line);
+function parse_pair($line)
+{
+    list($input, $insert) = explode(' -> ', $line);
 
-    return [ $input, [ $input[0] . $insert, $insert . $input[1] ] ];
+    return [$input, [$input[0] . $insert, $insert . $input[1]]];
 }
 
-function make_pairs($template) {
+function make_pairs($template)
+{
     for ($i = 1; $i < strlen($template); $i++) {
         yield $template[$i - 1] . $template[$i];
     }
 }
 
-function simulate_step($pairs, &$rules) {
+function simulate_step($pairs, &$rules)
+{
     $ret = [];
     foreach ($pairs as $pair => $count) {
         foreach ($rules[$pair] as $new_pair) {
@@ -23,11 +26,12 @@ function simulate_step($pairs, &$rules) {
     return $ret;
 }
 
-function count_letters($template, $pairs) {
+function count_letters($template, $pairs)
+{
     $ret = [];
     foreach ($pairs as $pair => $how_many) {
-        $ret[$pair[0]] += ($how_many * 0.5);
-        $ret[$pair[1]] += ($how_many * 0.5);
+        $ret[$pair[0]] += $how_many * 0.5;
+        $ret[$pair[1]] += $how_many * 0.5;
     }
 
     $ret[$template[0]] += 0.5;
@@ -57,7 +61,7 @@ function run($filename, $verbose = false)
     }
 
     if ($verbose) {
-        echo "Before: ";
+        echo 'Before: ';
         print_r($pairs);
     }
 
@@ -69,11 +73,11 @@ function run($filename, $verbose = false)
     $counts = count_letters($template, $pairs);
 
     if ($verbose) {
-        echo "After: ";
+        echo 'After: ';
         print_r($pairs);
-        echo "Counts: ";
+        echo 'Counts: ';
         print_r($counts);
-        echo "Total: " . array_sum(array_values($counts)) . "\n";
+        echo 'Total: ' . array_sum(array_values($counts)) . "\n";
     }
 
     $min = null;
@@ -88,8 +92,7 @@ function run($filename, $verbose = false)
     }
 
     if ($verbose) {
-        echo "Min: $min, Max: $max, Answer: "
-            . (int) ($max - $min) . "\n";
+        echo "Min: $min, Max: $max, Answer: " . (int) ($max - $min) . "\n";
     }
 
     return (int) ($max - $min);
@@ -112,4 +115,3 @@ function main($filename, $verbose = null, $expected = null)
 
 main('star-27-example.txt', true, 1588);
 main('star-27-input.txt', false);
-

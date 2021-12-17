@@ -1,12 +1,14 @@
 <?php
 
-function end_pos(&$grid) {
+function end_pos(&$grid)
+{
     $x = count($grid[0]) - 1;
     $y = count($grid) - 1;
     return "$x,$y";
 }
 
-function poor_priority_queue(&$queue, $val) {
+function poor_priority_queue(&$queue, $val)
+{
     list($node, $cost, $from) = $val;
 
     if (array_key_exists($node, $queue)) {
@@ -20,12 +22,11 @@ function poor_priority_queue(&$queue, $val) {
     asort($queue);
 }
 
-function neighbours(&$grid, $pos) {
-    list($x,$y) = explode(",", $pos);
+function neighbours(&$grid, $pos)
+{
+    list($x, $y) = explode(',', $pos);
 
-    $neighbours = [
-        [ 0,1 ], [ 1,0 ], [ 0, -1 ], [ -1, 0]
-    ];
+    $neighbours = [[0, 1], [1, 0], [0, -1], [-1, 0]];
 
     foreach ($neighbours as $n) {
         $new_x = $x + $n[0];
@@ -34,34 +35,36 @@ function neighbours(&$grid, $pos) {
             continue;
         }
 
-        yield [ $new_x, $new_y, $grid[$new_y][$new_x] ];
+        yield [$new_x, $new_y, $grid[$new_y][$new_x]];
     }
 }
 
-function retrace_path(&$grid, &$via, $pos) {
+function retrace_path(&$grid, &$via, $pos)
+{
     $path = [];
     $total_cost = 0;
     do {
-        list($x, $y) = explode(",", $pos);
+        list($x, $y) = explode(',', $pos);
         $total_cost += $grid[$y][$x];
 
         if (empty($via[$y][$x])) {
-            return [ $path, $total_cost ];
+            return [$path, $total_cost];
         }
 
         $pos = $via[$y][$x];
         $path[] = $pos;
-    } while($pos);
+    } while ($pos);
 }
 
-function dijkstra(&$grid, &$via, &$cost, &$queue) {
+function dijkstra(&$grid, &$via, &$cost, &$queue)
+{
     $pos = array_key_first($queue);
     $data = array_shift($queue);
     $val = $data['cost'];
 
     $from_str = empty($data['from']) ? '' : "from {$data['from']}, ";
 
-    list($x,$y) = explode(",", $pos);
+    list($x, $y) = explode(',', $pos);
     $via[$y][$x] = $data['from'];
     $cost[$y][$x] = $data['cost'];
 
@@ -70,7 +73,7 @@ function dijkstra(&$grid, &$via, &$cost, &$queue) {
         list($new_x, $new_y, $n_cost) = $n;
         $n_pos = "$new_x,$new_y";
 
-        $cost_to_visit = $n_cost+$val;
+        $cost_to_visit = $n_cost + $val;
 
         $previous_visit = $cost[$new_y][$new_x] ?? false;
         if ($previous_visit === false || $previous_visit > $cost_to_visit) {
@@ -100,7 +103,7 @@ function run($filename, $verbose = false)
     $cost = [];
 
     $queue = [];
-    poor_priority_queue($queue, ["0,0", 0, null ]);
+    poor_priority_queue($queue, ['0,0', 0, null]);
 
     while (count($queue) > 0) {
         dijkstra($grid, $via, $cost, $queue);
@@ -128,4 +131,3 @@ function main($filename, $verbose = null, $expected = null)
 
 main('star-29-example.txt', true, 40);
 main('star-29-input.txt', false);
-

@@ -1,11 +1,13 @@
 <?php
 
-function byte($str) {
-    $bits = sprintf("%08d", decbin(hexdec($str)));
+function byte($str)
+{
+    $bits = sprintf('%08d', decbin(hexdec($str)));
     return str_split($bits);
 }
 
-function str_to_bits($str) {
+function str_to_bits($str)
+{
     $parts = str_split($str, 2);
 
     foreach ($parts as $chunk) {
@@ -16,17 +18,20 @@ function str_to_bits($str) {
     }
 }
 
-function grab_as_array(&$bits, $amount) {
+function grab_as_array(&$bits, $amount)
+{
     return array_splice($bits, 0, $amount);
 }
 
-function grab(&$bits, $amount) {
+function grab(&$bits, $amount)
+{
     $parts = grab_as_array($bits, $amount);
-    $str = implode("", $parts);
+    $str = implode('', $parts);
     return bindec($str);
 }
 
-function decode_literal(&$bits) {
+function decode_literal(&$bits)
+{
     $digits = [];
     do {
         $group_prefix = array_shift($bits);
@@ -36,10 +41,11 @@ function decode_literal(&$bits) {
         $digits[] = array_shift($bits);
     } while ($group_prefix);
 
-    return bindec(implode("", $digits));
+    return bindec(implode('', $digits));
 }
 
-function decode_operator_packet(&$data, &$bits, $indent) {
+function decode_operator_packet(&$data, &$bits, $indent)
+{
     $length_type_id = grab($bits, 1);
 
     if ($length_type_id) {
@@ -72,7 +78,8 @@ function decode_operator_packet(&$data, &$bits, $indent) {
     }
 }
 
-function decode_packet(&$data, &$bits, $indent = '') {
+function decode_packet(&$data, &$bits, $indent = '')
+{
     $version = grab($bits, 3);
     $type_id = grab($bits, 3);
 
@@ -80,7 +87,7 @@ function decode_packet(&$data, &$bits, $indent = '') {
 
     $prefix = $indent . "PACKET[v{$version} t{$type_id}] ";
 
-    switch($type_id) {
+    switch ($type_id) {
         case 4:
             $literal = decode_literal($bits);
             if ($data['verbose']) {
@@ -132,4 +139,3 @@ main('A0016C880162017C3686B18A3D4780', true, 31);
 
 $lines = array_map('trim', file('star-31-input.txt'));
 main($lines[0], false);
-

@@ -1,17 +1,20 @@
 <?php
 
-function is_open($chr) {
+function is_open($chr)
+{
     return $chr == '(' || $chr == '[' || $chr == '{' || $chr == '<';
 }
 
-function is_match($open, $close) {
-    return ($open == '(' && $close == ')')
-        || ($open == '[' && $close == ']')
-        || ($open == '{' && $close == '}')
-        || ($open == '<' && $close == '>');
+function is_match($open, $close)
+{
+    return ($open == '(' && $close == ')') ||
+        ($open == '[' && $close == ']') ||
+        ($open == '{' && $close == '}') ||
+        ($open == '<' && $close == '>');
 }
 
-function parse_line($line) {
+function parse_line($line)
+{
     $open = [];
     foreach (str_split($line) as $chr) {
         if (is_open($chr)) {

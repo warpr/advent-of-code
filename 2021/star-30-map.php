@@ -1,10 +1,12 @@
 <?php
 
-function grid_size(&$grid) {
-    return [ count($grid[0]), count($grid) ];
+function grid_size(&$grid)
+{
+    return [count($grid[0]), count($grid)];
 }
 
-function wrap_incr($val) {
+function wrap_incr($val)
+{
     if (++$val > 9) {
         return $val - 9;
     } else {
@@ -12,13 +14,14 @@ function wrap_incr($val) {
     }
 }
 
-function render_grid(&$grid) {
+function render_grid(&$grid)
+{
     $ret = [];
     foreach ($grid as $y => $row) {
-        $ret[] = implode("", $row) . "\n";
+        $ret[] = implode('', $row) . "\n";
     }
 
-    return implode("", $ret);
+    return implode('', $ret);
 }
 
 function main($src, $dst)
@@ -39,7 +42,7 @@ function main($src, $dst)
     foreach ($grid as $y => $row) {
         foreach ($row as $x => $val) {
             $x_copy = $x;
-            foreach ([1,2,3,4] as $rep) {
+            foreach ([1, 2, 3, 4] as $rep) {
                 $val = wrap_incr($val);
                 $x_copy += $size_x;
                 $grid[$y][$x_copy] = $val;
@@ -53,7 +56,7 @@ function main($src, $dst)
     foreach ($grid as $y => $row) {
         foreach ($row as $x => $val) {
             $y_copy = $y;
-            foreach ([1,2,3,4] as $rep) {
+            foreach ([1, 2, 3, 4] as $rep) {
                 $val = wrap_incr($val);
                 $y_copy += $size_y;
                 $grid[$y_copy][$x] = $val;
@@ -68,4 +71,3 @@ function main($src, $dst)
 
 main('star-29-example.txt', 'star-30-example.txt');
 main('star-29-input.txt', 'star-30-input.txt');
-

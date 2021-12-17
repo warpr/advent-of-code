@@ -1,17 +1,16 @@
 <?php
 
-function pos_within_rect($pos, $rect) {
-    if ($pos[0] < $rect[0]
-        || $pos[0] > $rect[2]
-        || $pos[1] < $rect[1]
-        || $pos[1] > $rect[3]) {
+function pos_within_rect($pos, $rect)
+{
+    if ($pos[0] < $rect[0] || $pos[0] > $rect[2] || $pos[1] < $rect[1] || $pos[1] > $rect[3]) {
         return false;
     }
 
     return true;
 }
 
-function fire($target, $x_velocity, $y_velocity) {
+function fire($target, $x_velocity, $y_velocity)
+{
     $max_x = $target[2];
     $min_y = $target[1];
 
@@ -27,9 +26,9 @@ function fire($target, $x_velocity, $y_velocity) {
     while ($x < $max_x && $y > $min_y) {
         $x += $x_velocity;
         $y += $y_velocity;
-        $ret["$x,$y"] = "#";
+        $ret["$x,$y"] = '#';
 
-        if (pos_within_rect([ $x, $y ], $target)) {
+        if (pos_within_rect([$x, $y], $target)) {
             return $ret;
         }
 
@@ -44,16 +43,18 @@ function fire($target, $x_velocity, $y_velocity) {
     return false;
 }
 
-function height($shots) {
+function height($shots)
+{
     $all_y = [];
     foreach ($shots as $pos => $chr) {
-        list($x, $y) = explode(",", $pos);
+        list($x, $y) = explode(',', $pos);
         $all_y[] = $y;
     }
     return max($all_y);
 }
 
-function try_shot($target, $x, $y, $verbose) {
+function try_shot($target, $x, $y, $verbose)
+{
     echo "Attempt ($x, $y)";
 
     $trajectory = fire($target, $x, $y);
@@ -70,13 +71,14 @@ function try_shot($target, $x, $y, $verbose) {
     return true;
 }
 
-function render($target, $shots) {
+function render($target, $shots)
+{
     $max_x = max($target[0], $target[2]);
-    $min_y = min([0, $target[1], $target[3] ]);
-    $max_y = max([0, $target[1], $target[3] ]);
+    $min_y = min([0, $target[1], $target[3]]);
+    $max_y = max([0, $target[1], $target[3]]);
 
     foreach ($shots as $pos => $chr) {
-        list($x, $y) = explode(",", $pos);
+        list($x, $y) = explode(',', $pos);
         if ($y > $max_y) {
             $max_y = $y;
         }
@@ -86,17 +88,17 @@ function render($target, $shots) {
     }
 
     for ($y = $max_y; $y >= $min_y; $y--) {
-        printf("%4d|", $y);
+        printf('%4d|', $y);
         for ($x = 0; $x < $max_x; $x++) {
             $str_pos = "$x,$y";
             if (!empty($shots[$str_pos])) {
                 echo $shots[$str_pos];
-            } else if ($x == 0 && $y == 0) {
-                echo "S";
-            } else if (pos_within_rect([ $x, $y ], $target)) {
-                echo "T";
+            } elseif ($x == 0 && $y == 0) {
+                echo 'S';
+            } elseif (pos_within_rect([$x, $y], $target)) {
+                echo 'T';
             } else {
-                echo ".";
+                echo '.';
             }
         }
         echo "\n";
@@ -109,7 +111,7 @@ function run($str, $verbose = false)
 {
     $re = '/target area:\s+x=([0-9-]+)\.\.([0-9-]+),\s*y=([0-9-]+)\.\.([0-9-]+)/';
     if (preg_match($re, $str, $matches)) {
-        $target = [ (int) $matches[1], (int) $matches[3], (int) $matches[2], (int) $matches[4] ];
+        $target = [(int) $matches[1], (int) $matches[3], (int) $matches[2], (int) $matches[4]];
     }
 
     $range_x = [];
@@ -123,11 +125,11 @@ function run($str, $verbose = false)
     }
 
     $range_x[] = $target[2];
-    $range_y = [ $target[1], -$target[1] ];
+    $range_y = [$target[1], -$target[1]];
 
     $valid_trajectories = [];
-    for($x = $range_x[0]; $x <= $range_x[1]; $x++) {
-        for($y = $range_y[0]; $y <= $range_y[1]; $y++) {
+    for ($x = $range_x[0]; $x <= $range_x[1]; $x++) {
+        for ($y = $range_y[0]; $y <= $range_y[1]; $y++) {
             if (try_shot($target, $x, $y, $verbose)) {
                 $valid_trajectories[] = "$x,$y";
             }
@@ -138,8 +140,7 @@ function run($str, $verbose = false)
         print_r($valid_trajectories);
     }
 
-    echo "Searched from ({$range_x[0]}, {$range_y[0]})"
-    . " to ({$range_x[1]}, {$range_y[1]})\n\n";
+    echo "Searched from ({$range_x[0]}, {$range_y[0]})" . " to ({$range_x[1]}, {$range_y[1]})\n\n";
 
     return count($valid_trajectories);
 }

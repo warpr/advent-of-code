@@ -1,7 +1,8 @@
 <?php
 
-function evaluate($cmd, $arg) {
-    switch($cmd) {
+function evaluate($cmd, $arg)
+{
+    switch ($cmd) {
         case 'SUM':
             return array_sum($arg);
         case 'MUL':
@@ -26,12 +27,14 @@ function evaluate($cmd, $arg) {
     }
 }
 
-function byte($str) {
-    $bits = sprintf("%08d", decbin(hexdec($str)));
+function byte($str)
+{
+    $bits = sprintf('%08d', decbin(hexdec($str)));
     return str_split($bits);
 }
 
-function str_to_bits($str) {
+function str_to_bits($str)
+{
     $parts = str_split($str, 2);
 
     foreach ($parts as $chunk) {
@@ -42,17 +45,20 @@ function str_to_bits($str) {
     }
 }
 
-function grab_as_array(&$bits, $amount) {
+function grab_as_array(&$bits, $amount)
+{
     return array_splice($bits, 0, $amount);
 }
 
-function grab(&$bits, $amount) {
+function grab(&$bits, $amount)
+{
     $parts = grab_as_array($bits, $amount);
-    $str = implode("", $parts);
+    $str = implode('', $parts);
     return bindec($str);
 }
 
-function decode_literal(&$bits) {
+function decode_literal(&$bits)
+{
     $digits = [];
     do {
         $group_prefix = array_shift($bits);
@@ -62,10 +68,11 @@ function decode_literal(&$bits) {
         $digits[] = array_shift($bits);
     } while ($group_prefix);
 
-    return bindec(implode("", $digits));
+    return bindec(implode('', $digits));
 }
 
-function decode_operator_packet(&$data, &$bits, $indent) {
+function decode_operator_packet(&$data, &$bits, $indent)
+{
     $length_type_id = grab($bits, 1);
 
     $ret = [];
@@ -102,27 +109,28 @@ function decode_operator_packet(&$data, &$bits, $indent) {
     return $ret;
 }
 
-function decode_packet(&$data, &$bits, $indent = '') {
+function decode_packet(&$data, &$bits, $indent = '')
+{
     $version = grab($bits, 3);
     $type_id = grab($bits, 3);
 
     $data['versions'][] = $version;
 
     $command_mapping = [
-        0 => "SUM",
-        1 => "MUL",
-        2 => "MIN",
-        3 => "MAX",
-        4 => "VAL",
-        5 => "IF>",
-        6 => "IF<",
-        7 => "IF="
+        0 => 'SUM',
+        1 => 'MUL',
+        2 => 'MIN',
+        3 => 'MAX',
+        4 => 'VAL',
+        5 => 'IF>',
+        6 => 'IF<',
+        7 => 'IF=',
     ];
 
     $cmd = $command_mapping[$type_id] ?? '---';
     $prefix = $indent . "PACKET[v{$version} t{$type_id} $cmd] ";
 
-    if ($cmd === "VAL") {
+    if ($cmd === 'VAL') {
         $literal = decode_literal($bits);
         if ($data['verbose']) {
             echo "$prefix value: $literal\n";

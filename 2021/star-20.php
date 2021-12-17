@@ -1,17 +1,20 @@
 <?php
 
-function is_open($chr) {
+function is_open($chr)
+{
     return $chr == '(' || $chr == '[' || $chr == '{' || $chr == '<';
 }
 
-function is_match($open, $close) {
-    return ($open == '(' && $close == ')')
-        || ($open == '[' && $close == ']')
-        || ($open == '{' && $close == '}')
-        || ($open == '<' && $close == '>');
+function is_match($open, $close)
+{
+    return ($open == '(' && $close == ')') ||
+        ($open == '[' && $close == ']') ||
+        ($open == '{' && $close == '}') ||
+        ($open == '<' && $close == '>');
 }
 
-function filter_corrupted($line) {
+function filter_corrupted($line)
+{
     $open = [];
     foreach (str_split($line) as $chr) {
         if (is_open($chr)) {
@@ -29,7 +32,8 @@ function filter_corrupted($line) {
     return $line;
 }
 
-function score_incomplete($line, $verbose) {
+function score_incomplete($line, $verbose)
+{
     $open = [];
     foreach (str_split($line) as $chr) {
         if (is_open($chr)) {
@@ -56,7 +60,7 @@ function score_incomplete($line, $verbose) {
     }
 
     if ($verbose) {
-        echo $line . " | " . implode("", $open) . " = $line_score\n";
+        echo $line . ' | ' . implode('', $open) . " = $line_score\n";
     }
     return $line_score;
 }
