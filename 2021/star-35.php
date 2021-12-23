@@ -1,6 +1,7 @@
 <?php
 
-function explode_pair_at($key, $input) {
+function explode_pair_at($key, $input)
+{
     $before_idx = null;
     $after_idx = null;
 
@@ -26,12 +27,12 @@ function explode_pair_at($key, $input) {
     if ($after_idx !== null) {
         if (!is_numeric($input[$after_idx])) {
             echo "Pos $after_idx is not numeric: " . $input[$after_idx] . "\n";
-            echo "Input: " . implode("", $input) . "\n";
+            echo 'Input: ' . implode('', $input) . "\n";
             die();
         }
         if (!is_numeric($input[$key + 2])) {
             echo "Pos $key + 3 is not numeric: " . $input[$key + 2] . "\n";
-            echo "Input: " . implode("", $input) . "\n";
+            echo 'Input: ' . implode('', $input) . "\n";
             die();
         }
 
@@ -43,14 +44,15 @@ function explode_pair_at($key, $input) {
     return $input;
 }
 
-function explode_pairs($input) {
+function explode_pairs($input)
+{
     $nested = 0;
     foreach ($input as $key => $val) {
         if ($val === '[') {
             $nested++;
-        } else if ($val === ']') {
+        } elseif ($val === ']') {
             $nested--;
-        } else if (is_numeric($val)) {
+        } elseif (is_numeric($val)) {
             // cannot explode pair if the second element is also a pair?
             if (is_numeric($input[$key + 2]) && $nested > 4) {
                 return explode_pair_at($key, $input);
@@ -61,16 +63,18 @@ function explode_pairs($input) {
     return $input;
 }
 
-function create_pair_at($key, $input) {
+function create_pair_at($key, $input)
+{
     $a = floor($input[$key] / 2);
     $b = ceil($input[$key] / 2);
-    $pair = [ '[', $a, ',', $b, ']' ];
+    $pair = ['[', $a, ',', $b, ']'];
 
     array_splice($input, $key, 1, $pair);
     return $input;
 }
 
-function split_large_numbers($input) {
+function split_large_numbers($input)
+{
     foreach ($input as $key => $val) {
         if (is_numeric($val) && $val >= 10) {
             return create_pair_at($key, $input);
@@ -80,48 +84,52 @@ function split_large_numbers($input) {
     return $input;
 }
 
-function reduce_pairs($tokens) {
+function reduce_pairs($tokens)
+{
     $prev = null;
-    $current = implode("", $tokens);
+    $current = implode('', $tokens);
     $steps = 0;
-//    printf(" %03d Befor> $current\n", $steps);
+    //    printf(" %03d Befor> $current\n", $steps);
     do {
         $steps++;
         $prev = $current;
         $tokens = explode_pairs($tokens);
-        $tmp = implode("", $tokens);
+        $tmp = implode('', $tokens);
         if ($tmp === $prev) {
-//            printf(" %03d Boom!> $tmp\n", $steps);
+            //            printf(" %03d Boom!> $tmp\n", $steps);
 
             // only split if there is nothing more to explode
 
             $tokens = split_large_numbers($tokens);
-            $current = implode("", $tokens);
+            $current = implode('', $tokens);
             if ($tmp !== $current) {
-//                printf(" %03d Split> $current\n", $steps);
+                //                printf(" %03d Split> $current\n", $steps);
             }
         } else {
             $current = $tmp;
         }
     } while ($prev !== $current);
 
-//    printf(" %03d After> $current\n", $steps);
+    //    printf(" %03d After> $current\n", $steps);
 
     return $tokens;
 }
 
-function addition($a, $b) {
-    return array_merge([ '[' ], $a, [ ',' ], $b, [ ']' ]);
+function addition($a, $b)
+{
+    return array_merge(['['], $a, [','], $b, [']']);
 }
 
-function t($str) {
+function t($str)
+{
     return str_split($str, 1);
 }
 
-function reduce_test($input, $expected) {
+function reduce_test($input, $expected)
+{
     $reduced = reduce_pairs(t($input));
 
-    $actual = implode("", $reduced);
+    $actual = implode('', $reduced);
 
     if ($actual !== $expected) {
         echo "Reduce test failed, expected: $expected, actual: $actual.\n";
@@ -131,14 +139,15 @@ function reduce_test($input, $expected) {
     }
 }
 
-function magnitude_pair($tokens) {
+function magnitude_pair($tokens)
+{
     foreach ($tokens as $key => $val) {
         if (!is_numeric($val)) {
             continue;
         }
 
         if (is_numeric($tokens[$key + 2])) {
-            $here = (3 * $val) + (2 * $tokens[$key + 2]);
+            $here = 3 * $val + 2 * $tokens[$key + 2];
             array_splice($tokens, $key - 1, 5, $here);
             return $tokens;
         }
@@ -147,14 +156,15 @@ function magnitude_pair($tokens) {
     return $tokens;
 }
 
-function magnitude($tokens) {
+function magnitude($tokens)
+{
     $prev = null;
-    $current = implode("", $tokens);
+    $current = implode('', $tokens);
 
     do {
         $prev = $current;
         $tokens = magnitude_pair($tokens);
-        $current = implode("", $tokens);
+        $current = implode('', $tokens);
     } while ($prev !== $current);
 
     if (count($tokens) !== 1) {
@@ -165,7 +175,8 @@ function magnitude($tokens) {
     return (int) $tokens[0];
 }
 
-function magnitude_test($input, $expected) {
+function magnitude_test($input, $expected)
+{
     $actual = magnitude($input);
 
     if ($actual !== $expected) {
@@ -182,13 +193,13 @@ function run($filename, $verbose = false)
 
     $tokens = t(array_shift($lines));
     foreach ($lines as $line) {
-//        echo "  " . implode("", $tokens) . "\n";
-//        echo "+ " . implode("", t($line)) . "\n";
+        //        echo "  " . implode("", $tokens) . "\n";
+        //        echo "+ " . implode("", t($line)) . "\n";
         $tokens = reduce_pairs(addition($tokens, t($line)));
-//        echo "= " . implode("", $tokens) . "\n";
+        //        echo "= " . implode("", $tokens) . "\n";
     }
 
-    echo "\nFinal sum for $filename:\n  " . implode("", $tokens) . "\n\n";
+    echo "\nFinal sum for $filename:\n  " . implode('', $tokens) . "\n\n";
     return magnitude($tokens);
 }
 function main($str, $verbose = null, $expected = null)
