@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
+// ini_set('memory_limit', '4096M');
 ini_set('memory_limit', '24576M');
 
 function remove_duplicates($states)
 {
     $hashed = [];
     foreach ($states as $input => $state) {
-        $key = implode(',', [$state['w'], $state['x'], $state['y'], $state['z']]);
+        $key = implode(',', [$state[0], $state[1], $state[2], $state[3]]);
         $hashed[$key] = $input;
     }
 
@@ -57,8 +58,7 @@ function print_instruction($instruction)
 
 function print_state($state)
 {
-    extract($state);
-    printf("ALU[w: %d, x: %d, y: %d, z: %d]\n", $w, $x, $y, $z);
+    printf("ALU[w: %d, x: %d, y: %d, z: %d]\n", $state[0], $state[1], $state[2], $state[3]);
 }
 
 function parse_line($line)
@@ -68,12 +68,17 @@ function parse_line($line)
     return ['cmd' => $cmd, 'args' => $parts];
 }
 
+function state_idx($arg)
+{
+    return ord($arg) - ord('w');
+}
+
 function arg_to_value(&$state, $arg)
 {
     $registers = ['w', 'x', 'y', 'z'];
 
     if (in_array($arg, $registers)) {
-        return $state[$arg];
+        return $state[state_idx($arg)];
     } elseif (is_numeric($arg)) {
         return $arg;
     }
@@ -87,31 +92,27 @@ function run_instruction(&$state, &$input, $instruction)
     $registers = ['w', 'x', 'y', 'z'];
     extract($instruction);
 
+    $register = state_idx($args[0]);
+
     switch ($cmd) {
         case 'inp':
-            $register = $args[0];
             $state[$register] = array_shift($input);
             break;
         case 'mul':
-            $register = $args[0];
             $state[$register] = arg_to_value($state, $args[0]) * arg_to_value($state, $args[1]);
             break;
         case 'add':
-            $register = $args[0];
             $state[$register] = arg_to_value($state, $args[0]) + arg_to_value($state, $args[1]);
             break;
         case 'div':
-            $register = $args[0];
             $state[$register] = floor(
                 arg_to_value($state, $args[0]) / arg_to_value($state, $args[1])
             );
             break;
         case 'mod':
-            $register = $args[0];
             $state[$register] = arg_to_value($state, $args[0]) % arg_to_value($state, $args[1]);
             break;
         case 'eql':
-            $register = $args[0];
             $a = (int) arg_to_value($state, $args[0]);
             $b = (int) arg_to_value($state, $args[1]);
             $state[$register] = $a === $b ? 1 : 0;
@@ -127,14 +128,14 @@ function alu(array $program, array $input, array $state = null)
     $lines = array_map('trim', $program);
 
     if (empty($state)) {
-        $state = ['w' => 0, 'x' => 0, 'y' => 0, 'z' => 0];
+        $state = [0, 0, 0, 0];
     }
 
     foreach ($lines as $line) {
         $instruction = parse_line($line);
         run_instruction($state, $input, $instruction);
-        //        print_instruction($instruction);
-        //        print_state($state);
+        // print_instruction($instruction);
+        // print_state($state);
     }
 
     return $state;
@@ -162,7 +163,7 @@ function run($filename, $verbose = false)
         $programs[] = $current;
     }
 
-    $state = ['w' => 0, 'x' => 0, 'y' => 0, 'z' => 0];
+    $state = [0, 0, 0, 0];
     $states = ['' => $state];
     foreach ($programs as $idx => $p) {
         $states = enumerate_program($p, $states);
@@ -172,7 +173,7 @@ function run($filename, $verbose = false)
     }
 
     foreach ($states as $input => $state) {
-        if ($state['z']) {
+        if ($state[3]) {
             echo "Found z = 1: $input\n";
         }
     }
@@ -208,17 +209,17 @@ function expect($actual, $expected, $desc)
 $result = alu(['inp x', 'mul x -1'], [4]);
 
 print_state($result);
-expect($result['x'], -4, 'negated in x');
+expect($result[1], -4, 'negated in x');
 
 $example2 = ['inp z', 'inp x', 'mul z 3', 'eql z x'];
 
 $result = alu($example2, [3, 9]);
 print_state($result);
-expect($result['z'], 1, 'second number is three times larger');
+expect($result[3], 1, 'second number is three times larger');
 
 $result = alu($example2, [3, 8]);
 print_state($result);
-expect($result['z'], 0, 'second number is NOT three times larger');
+expect($result[3], 0, 'second number is NOT three times larger');
 
 $example3 = [
     'inp w',
@@ -236,6 +237,6 @@ $example3 = [
 
 $result = alu($example3, [0x0a]);
 print_state($result);
-expect($result['w'], 1, '0x0A is 1010');
+expect($result[0], 1, '0x0A is 1010');
 
 main('star-47-input.txt', false);
