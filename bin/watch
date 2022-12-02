@@ -1,0 +1,3 @@
+#!/bin/sh
+
+npx nodemon --watch . --ext php --exec 'php 2022/day-0x01.php'
