@@ -1,0 +1,113 @@
+#!/usr/bin/env php
+<?php
+
+function version() {
+    $root = dirname(__DIR__);
+
+    $package_json = @file_get_contents("{$root}/package.json");
+    $package = @json_decode($package_json, true);
+
+    return $package['version'] ?? '2020.0.1';
+}
+
+function request(string $method, string $url, array $headers, $body = null) {
+    $version = version();
+    $user_agent = "warpr/advent-of-code v{$version} by kuno@frob.nl";
+
+    $options = [
+        'http' => [
+            'method' => $method,
+            'user_agent' => $user_agent,
+            'follow_location' => true,
+            'ignore_errors' => true,
+        ],
+    ];
+
+    if (!empty($headers)) {
+        $options['http']['header'] = '';
+
+        foreach ($headers as $key => $val) {
+            $options['http']['header'] .= "$key: $val\r\n";
+        }
+    }
+
+    if (!empty($body)) {
+        $options['http']['content'] = $body;
+    }
+
+    $context = stream_context_create($options);
+    $body = file_get_contents($url, false, $context);
+
+    $status = null;
+    $status_line = array_shift($http_response_header);
+    if (preg_match('{HTTP\/\S*\s(\d{3})}', $status_line, $matches)) {
+        $status = (int) $matches[1];
+    } else {
+        msg(LOG_ERROR, 'Failed to parse response ' . $status_line);
+        return null;
+    }
+
+    $headers = [];
+    foreach ($http_response_header as $line) {
+        // FIXME: probably doesn't support multi-line responses
+        $parts = explode(':', $line, 2);
+        if (!empty($parts[1])) {
+            $headers[$parts[0]] = trim($parts[1]);
+        }
+    }
+
+    $remaining = $headers['X-RateLimit-Remaining'] ?? 99;
+    if ($remaining < 2) {
+        $wait_seconds = $headers['X-RateLimit-Reset-In'] ?? 10;
+        echo "[Request] Rate limited, waiting $wait_seconds seconds\n";
+        sleep($wait_seconds);
+    }
+
+    return compact('status', 'body', 'headers');
+}
+
+function main() {
+    $root = dirname(__DIR__);
+
+    $config_str = @file_get_contents(__DIR__ . '/config.json');
+    $config = @json_decode($config_str);
+
+    if (empty($config)) {
+        echo "Could not read configuration, please create bin/config.json\n";
+    }
+
+    $today = new DateTime();
+    $day = $today->format('j');
+    $year = $today->format('Y');
+
+    $url = "https://adventofcode.com/{$year}/day/{$day}/input";
+
+    $file_prefix = $root . sprintf("/%s/day-0x%02x", $year, $day);
+
+    $yesterday_php = $root . sprintf("/%s/day-0x%02x.php", $year, $day - 1);
+    $today_php = $file_prefix . '.php';
+    $today_input = $file_prefix . '-part1.input.txt';
+
+    if (!is_readable($today_php) && is_readable($yesterday_php)) {
+        $yesterday_body = file_get_contents($yesterday_php);
+        file_put_contents($today_php, $yesterday_body);
+        echo "Copied " . basename($yesterday_php) . " to " . basename($today_php) . "\n";
+    }
+
+    if (!is_readable($today_input)) {
+        $headers = [
+            'cookie' => http_build_query(['session' => $config->session ])
+        ];
+
+        $response = request('GET', $url, $headers);
+        echo "Downloading {$url}: {$response['status']}\n";
+        if (!empty($response['body'])) {
+            echo "Response saved to {$today_input}\n";
+            file_put_contents($today_input, $response['body']);
+        }
+    } else {
+        echo "Not downloading $today_input\n";
+    }
+}
+
+main();
