@@ -86,7 +86,7 @@ function main() {
 
     $yesterday_php = $root . sprintf("/%s/day-0x%02x.php", $year, $day - 1);
     $today_php = $file_prefix . '.php';
-    $today_input = $file_prefix . '-part1.input.txt';
+    $today_input = $file_prefix . '.input.txt';
 
     if (!is_readable($today_php) && is_readable($yesterday_php)) {
         $yesterday_body = file_get_contents($yesterday_php);
