@@ -43,3 +43,54 @@ function run_part2($input_name, $verbose = false, $expected = null)
 {
     return run_part(2, $input_name, $verbose, $expected);
 }
+
+/**
+ * Array helpers
+ * =============
+ */
+
+function get_by_path(array $var, array $path, $default = null)
+{
+    while (count($path) > 0) {
+        if (is_object($var)) {
+            $var = (array) $var;
+        }
+
+        if (!is_array($var)) {
+            return $default;
+        }
+
+        $part = array_shift($path);
+        if (isset($var[$part]) || (is_numeric($part) && isset($var[(int) $part]))) {
+            $var = &$var[$part];
+        } else {
+            return $default;
+        }
+    }
+
+    return $var;
+}
+
+function set_by_path(array &$var, array $path, $value): void
+{
+    while (count($path) > 1) {
+        $part = array_shift($path);
+        if (!isset($var[$part])) {
+            $var[$part] = [];
+        }
+        $var = &$var[$part];
+    }
+
+    $var[$path[0]] = $value;
+}
+
+function array_edit_recursive($tree, $callable)
+{
+    if (is_array($tree)) {
+        foreach ($tree as $key => $val) {
+            $tree[$key] = array_edit_recursive($val, $callable);
+        }
+    }
+
+    return $callable($tree);
+}
