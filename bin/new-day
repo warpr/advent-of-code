@@ -87,6 +87,7 @@ function main() {
     $yesterday_php = $root . sprintf("/%s/day-0x%02x.php", $year, $day - 1);
     $today_php = $file_prefix . '.php';
     $today_input = $file_prefix . '.input.txt';
+    $today_example = $file_prefix . '.example.txt';
 
     if (!is_readable($today_php) && is_readable($yesterday_php)) {
         $yesterday_body = file_get_contents($yesterday_php);
@@ -105,6 +106,8 @@ function main() {
             echo "Response saved to {$today_input}\n";
             file_put_contents($today_input, $response['body']);
         }
+
+        file_put_contents($today_example, '(nothing here yet)');
     } else {
         echo "Not downloading $today_input\n";
     }
