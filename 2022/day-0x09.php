@@ -4,67 +4,78 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-function move(array &$board, $direction)
+function move_knot(array $head, array $tail): array
 {
-    $head = $board['head'];
-
-    switch ($direction) {
-        case 'L':
-            $board['head'][0]--;
-            break;
-        case 'R':
-            $board['head'][0]++;
-            break;
-        case 'D':
-            $board['head'][1]--;
-            break;
-        case 'U':
-            $board['head'][1]++;
-            break;
-    }
-
-    $x_distance = $board['head'][0] - $board['tail'][0];
-    $y_distance = $board['head'][1] - $board['tail'][1];
+    $x_distance = $head[0] - $tail[0];
+    $y_distance = $head[1] - $tail[1];
 
     if ($y_distance === 0) {
         // head and tail are in the same row
 
         if ($x_distance > 1) {
-            $board['tail'][0] = $board['head'][0] - 1;
+            $tail[0] = $head[0] - 1;
         } elseif ($x_distance < -1) {
-            $board['tail'][0] = $board['head'][0] + 1;
+            $tail[0] = $head[0] + 1;
         }
     } elseif ($x_distance === 0) {
         // head and tail are in the same column
 
         if ($y_distance > 1) {
-            $board['tail'][1] = $board['head'][1] - 1;
+            $tail[1] = $head[1] - 1;
         } elseif ($y_distance < -1) {
-            $board['tail'][1] = $board['head'][1] + 1;
+            $tail[1] = $head[1] + 1;
         }
     } elseif (abs($x_distance) > 1 || abs($y_distance) > 1) {
         // tail is trailing diagonally, and not touching
 
         if ($x_distance > 0) {
-            $board['tail'][0]++;
+            $tail[0]++;
         } elseif ($x_distance < 0) {
-            $board['tail'][0]--;
+            $tail[0]--;
         }
 
         if ($y_distance > 0) {
-            $board['tail'][1]++;
+            $tail[1]++;
         } elseif ($y_distance < 0) {
-            $board['tail'][1]--;
+            $tail[1]--;
         }
+    }
+
+    return $tail;
+}
+
+function move_head(array $head, string $direction): array
+{
+    switch ($direction) {
+        case 'L':
+            $head[0]--;
+            break;
+        case 'R':
+            $head[0]++;
+            break;
+        case 'D':
+            $head[1]--;
+            break;
+        case 'U':
+            $head[1]++;
+            break;
+    }
+
+    return $head;
+}
+
+function move(array &$board, $direction)
+{
+    $board[0] = move_head($board[0], $direction);
+
+    for ($i = 1; $i < count($board); $i++) {
+        $board[$i] = move_knot($board[$i - 1], $board[$i]);
     }
 }
 
-function part1($filename, bool $verbose)
+function main($filename, int $rope_length, bool $verbose)
 {
-    $board = [
-        'head' => [0, 0],
-        'tail' => [0, 0],
-    ];
+    $board = array_fill(0, $rope_length, [0, 0]);
 
     $seen = [];
 
@@ -76,13 +87,12 @@ function part1($filename, bool $verbose)
             move($board, $direction);
 
             if ($verbose) {
-                echo '[' . trim($line) . " - $i] Positions";
-                echo '| H: ' . json_encode($board['head']);
-                echo '| T: ' . json_encode($board['tail']);
-                echo "\n";
+                echo '[' . trim($line) . " - $i] Positions: ";
+                echo json_encode($board) . "\n";
             }
 
-            $tail_pos = implode(',', $board['tail']);
+            $tail = end($board);
+            $tail_pos = implode(',', $tail);
             $seen[$tail_pos] = true;
         }
     }
@@ -90,9 +100,20 @@ function part1($filename, bool $verbose)
     return count($seen);
 }
 
+function part1($filename, bool $verbose)
+{
+    return main($filename, 2, $verbose);
+}
+
+function part2($filename, bool $verbose)
+{
+    return main($filename, 10, $verbose);
+}
+
 run_part1('example', true, 13);
 run_part1('input');
-//run_part2('example', true, 8);
-//run_part2('input');
+run_part2('example', true, 1);
+run_part2('example2', false, 36);
+run_part2('input');
 
 echo "\n";
