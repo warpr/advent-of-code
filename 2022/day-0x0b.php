@@ -4,6 +4,15 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
+function big_int($val)
+{
+    if ($val instanceof \GMP) {
+        return $val;
+    }
+
+    return gmp_init($val);
+}
+
 function parse_input(array $lines)
 {
     $monkeys = [];
@@ -32,7 +41,7 @@ function parse_input(array $lines)
     return $monkeys;
 }
 
-function run_operation(array $op, int $val)
+function run_operation(array $op, GMP $val)
 {
     $op = array_map(fn($i) => $i === 'old' ? $val : $i, $op);
     list($arg1, $infix, $arg2) = $op;
@@ -50,14 +59,19 @@ function run_operation(array $op, int $val)
     die();
 }
 
-function play_round(int $roundno, array $state, array &$inspections, bool $verbose): array
-{
+function play_round(
+    int $roundno,
+    array $state,
+    array &$inspections,
+    bool $part2,
+    bool $verbose
+): array {
     foreach ($state as $idx => $unused) {
         // $unused is outdated once we get to subsequent monkeys
         $monkey = $state[$idx];
 
         if ($verbose) {
-            //            echo $monkey['name'] . ":\n";
+            echo $monkey['name'] . ":\n";
         }
 
         $state[$idx]['items'] = [];
@@ -65,17 +79,30 @@ function play_round(int $roundno, array $state, array &$inspections, bool $verbo
         foreach ($monkey['items'] as $item) {
             @$inspections[$monkey['name']]++;
 
-            $worry_level = run_operation($monkey['operation'], $item);
-            $bored_level = (int) floor($worry_level / 3);
-            $rest = $bored_level % $monkey['test-div'];
-            $throw_to = $rest ? $monkey['throw-false'] : $monkey['throw-true'];
+            $worry_level = run_operation($monkey['operation'], big_int($item));
+
+            if ($part2) {
+                $bored_level = $worry_level;
+            } else {
+                $bored_level = gmp_div_q($worry_level, 3);
+            }
+
+            $rest = gmp_div_r($bored_level, $monkey['test-div']);
+            $divisible = $rest == 0;
+            $throw_to = $divisible ? $monkey['throw-true'] : $monkey['throw-false'];
 
             if ($verbose) {
-                //                echo "  " . $monkey['name'] . " inspects an item with a worry level of $item\n";
-                //                echo "    Worry level is [" . implode(" ", $monkey['operation']) . "] to $worry_level.\n";
-                //                echo "    Monkey gets bored with item. Worry level is divided by 3 to $bored_level.\n";
-                //                echo "    Current worry level is " . (empty($rest) ? "" : "not ") . "divisible by " . $monkey['test-div'] . ".\n";
-                //                echo "    Item with worry level $bored_level is thrown to monkey $throw_to.\n";
+                echo '  ' . $monkey['name'] . " inspects an item with a worry level of $item\n";
+                echo '    Worry level is [' .
+                    implode(' ', $monkey['operation']) .
+                    "] to $worry_level.\n";
+                echo "    Monkey gets bored with item. Worry level is divided by 3 to $bored_level.\n";
+                echo '    Current worry level is ' .
+                    ($divisible ? '' : 'not ') .
+                    'divisible by ' .
+                    $monkey['test-div'] .
+                    ".\n";
+                echo "    Item with worry level $bored_level is thrown to monkey $throw_to.\n";
             }
 
             $state[$throw_to]['items'][] = $bored_level;
@@ -93,7 +120,7 @@ function play_round(int $roundno, array $state, array &$inspections, bool $verbo
     return $state;
 }
 
-function main($filename, bool $verbose)
+function part1($filename, bool $verbose)
 {
     $lines = file($filename);
     $state = parse_input($lines);
@@ -105,7 +132,7 @@ function main($filename, bool $verbose)
     $inspections = [];
 
     for ($i = 1; $i <= 20; $i++) {
-        $state = play_round($i, $state, $inspections, $verbose);
+        $state = play_round($i, $state, $inspections, false, $verbose);
     }
 
     sort($inspections);
@@ -116,12 +143,40 @@ function main($filename, bool $verbose)
     return $monkey_business;
 }
 
-function part1($filename, bool $verbose)
+function part2($filename, bool $verbose)
 {
-    return main($filename, $verbose);
+    $lines = file($filename);
+    $state = parse_input($lines);
+
+    $inspections = [];
+    for ($i = 1; $i <= 10000; $i++) {
+        $state = play_round($i, $state, $inspections, true, false);
+
+        $show_at = [1, 20, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
+        if ($verbose && in_array($i, $show_at)) {
+            echo "\n== After round $i ==\n";
+            foreach ($inspections as $monkey => $count) {
+                echo "{$monkey} inspected items {$count} times.\n";
+            }
+        } elseif ($i % 100) {
+            echo '.';
+        } else {
+            echo "(round $i)\n";
+        }
+    }
+
+    sort($inspections);
+    $monkey_business = array_pop($inspections) * array_pop($inspections);
+
+    echo "Monkey business: $monkey_business\n";
+
+    return $monkey_business;
 }
 
-run_part1('example', true, 10605);
+run_part1('example', false, 10605);
 run_part1('input');
+echo "\n";
 
+run_part2('example', true, 2713310158);
+run_part2('input');
 echo "\n";
