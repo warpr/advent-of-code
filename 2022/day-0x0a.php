@@ -4,7 +4,45 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-function part1($filename, bool $verbose)
+function display_screen(array $screen)
+{
+    echo "\n";
+
+    while (count($screen) > 0) {
+        $line = array_slice($screen, 0, 40);
+        $screen = array_slice($screen, 40);
+        echo implode('', $line) . "\n";
+    }
+
+    echo "\n";
+}
+
+function current_row(array $screen)
+{
+    while (count($screen) > 40) {
+        $screen = array_slice($screen, 40);
+    }
+
+    echo implode('', $screen) . "\n";
+}
+
+function update_screen(int $cycle, int $x, array &$screen, bool $verbose)
+{
+    $beam_pos = ($cycle - 1) % 40;
+    if ($verbose) {
+        echo "During cycle  $cycle: CRT draws pixel in position $beam_pos\n";
+    }
+
+    $pixel_visible = $beam_pos >= $x - 1 && $beam_pos <= $x + 1;
+    $screen[$cycle - 1] = $pixel_visible ? '#' : '.';
+
+    if ($verbose) {
+        echo 'Current CRT row: ';
+        current_row($screen);
+    }
+}
+
+function main($filename, bool $verbose, array &$screen)
 {
     $x = 1;
 
@@ -14,15 +52,26 @@ function part1($filename, bool $verbose)
 
     $cycles = 0;
     foreach ($lines as $line) {
+        $cycles++;
+        if ($verbose) {
+            echo "\nStart cycle   $cycles: begin executing $line";
+        }
+        update_screen($cycles, $x, $screen, $verbose);
+
         if (preg_match('/noop/', $line)) {
-            $cycles++;
             $signals[] = $x;
         } elseif (preg_match('/addx (-?[0-9]+)/', $line, $matches)) {
-            $cycles++;
             $signals[] = $x;
             $cycles++;
+            update_screen($cycles, $x, $screen, $verbose);
             $signals[] = $x;
             $x += (int) $matches[1];
+
+            if ($verbose) {
+                echo "End of cycle  $cycles: finish executing " .
+                    trim($line) .
+                    " (Register X is now $x)\n";
+            }
         }
     }
 
@@ -38,27 +87,31 @@ function part1($filename, bool $verbose)
     return array_sum($signal_strengths);
 }
 
+function part1($filename, bool $verbose)
+{
+    $screen = [];
+
+    return main($filename, $verbose, $screen);
+}
+
+function part2($filename, bool $verbose)
+{
+    $screen = [];
+
+    main($filename, $verbose, $screen);
+
+    display_screen($screen);
+
+    return 23;
+}
+
 run_part1('example0', true, 0);
 run_part1('example', true, 13140);
 run_part1('input');
+run_part2('example0', true, 0);
+run_part2('example', true, 0);
+run_part2('input');
 
-/* run_part2('example', true, 1);
- * run_part2('example2', false, 36);
- * run_part2('input');
- *  */
-/**
-
-noop
-addx 3
-addx -5
-
-
-The interesting signal strengths can be determined as follows:
-
-The sum of these signal strengths is 13140.
-
-Find the signal strength during the 20th, 60th, 100th, 140th, 180th, and 220th cycles. What is the sum of these six signal strengths?
-
-*/
+// answer: PGPHBEAB
 
 echo "\n";
