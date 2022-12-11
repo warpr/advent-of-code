@@ -64,6 +64,7 @@ function play_round(
     array $state,
     array &$inspections,
     bool $part2,
+    int $magic_number,
     bool $verbose
 ): array {
     foreach ($state as $idx => $unused) {
@@ -82,7 +83,7 @@ function play_round(
             $worry_level = run_operation($monkey['operation'], big_int($item));
 
             if ($part2) {
-                $bored_level = $worry_level;
+                $bored_level = gmp_div_r($worry_level, $magic_number);
             } else {
                 $bored_level = gmp_div_q($worry_level, 3);
             }
@@ -132,7 +133,7 @@ function part1($filename, bool $verbose)
     $inspections = [];
 
     for ($i = 1; $i <= 20; $i++) {
-        $state = play_round($i, $state, $inspections, false, $verbose);
+        $state = play_round($i, $state, $inspections, false, 0, $verbose);
     }
 
     sort($inspections);
@@ -148,9 +149,14 @@ function part2($filename, bool $verbose)
     $lines = file($filename);
     $state = parse_input($lines);
 
+    $magic_number = 1;
+    foreach ($state as $monkey) {
+        $magic_number *= $monkey['test-div'];
+    }
+
     $inspections = [];
     for ($i = 1; $i <= 10000; $i++) {
-        $state = play_round($i, $state, $inspections, true, false);
+        $state = play_round($i, $state, $inspections, true, $magic_number, false);
 
         $show_at = [1, 20, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000];
         if ($verbose && in_array($i, $show_at)) {
