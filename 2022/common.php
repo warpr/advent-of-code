@@ -94,3 +94,18 @@ function array_edit_recursive($tree, $callable)
 
     return $callable($tree);
 }
+
+function sort_by(array $items, string $field)
+{
+    usort($items, function ($a, $b) use ($field) {
+        $a_val = is_array($a) ? $a[$field] : $a->$field;
+        $b_val = is_array($b) ? $b[$field] : $b->$field;
+
+        if ($a_val == $b_val) {
+            return 0;
+        }
+        return $a_val < $b_val ? -1 : 1;
+    });
+
+    return $items;
+}
