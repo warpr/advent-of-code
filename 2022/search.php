@@ -6,7 +6,7 @@ class Node
 {
     public $links = [];
 
-    public function __construct(public string $name)
+    public function __construct(public string $name = '')
     {
     }
 
@@ -18,9 +18,9 @@ class Node
         }
     }
 
-    public function path_to_self()
+    public function get_links()
     {
-        return (object) ['node' => $this, 'cost' => 0];
+        return $this->links;
     }
 }
 
@@ -65,7 +65,7 @@ function dijkstra(Node $starting_node)
     while (!empty($next)) {
         $current = array_shift($next);
 
-        $links = sort_by($current->links, 'cost');
+        $links = sort_by($current->get_links(), 'cost');
 
         foreach ($links as $other) {
             if (!empty($visited[$other->node->name])) {
