@@ -79,7 +79,6 @@ function dijkstra(Node $starting_node)
             if (empty($table[$other->node->name])) {
                 $table[$other->node->name] = [
                     'distance' => $total,
-                    'visited' => false,
                     'previous' => $current,
                     'self' => $other->node,
                 ];
