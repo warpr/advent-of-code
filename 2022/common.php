@@ -109,3 +109,15 @@ function sort_by(array $items, string $field)
 
     return $items;
 }
+
+function as_array($value)
+{
+    return is_array($value) ? $value : [$value];
+}
+
+function vecho(bool $verbose, string $msg)
+{
+    if ($verbose) {
+        echo $msg;
+    }
+}
