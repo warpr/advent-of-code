@@ -23,16 +23,11 @@ function parse(string $filename)
                 $matches
             )
         ) {
-            yield (object) [
-                'sensor' => (object) [
-                    'x' => (int) $matches[1],
-                    'y' => (int) $matches[2],
-                ],
-                'beacon' => (object) [
-                    'x' => (int) $matches[3],
-                    'y' => (int) $matches[4],
-                ],
-            ];
+            $sensor = (object) ['x' => (int) $matches[1], 'y' => (int) $matches[2]];
+            $beacon = (object) ['x' => (int) $matches[3], 'y' => (int) $matches[4]];
+            $range = distance($sensor, $beacon);
+
+            yield (object) compact('sensor', 'beacon', 'range');
         }
     }
 }
@@ -99,36 +94,91 @@ function draw_sensor_data($data)
         @$grid[$reading->sensor->y][$reading->sensor->x] = 'S';
         @$grid[$reading->beacon->y][$reading->beacon->x] = 'B';
 
-        $beacon_distance = distance($reading->sensor, $reading->beacon);
-        draw_sensor_range($grid, $reading->sensor, $beacon_distance);
+        draw_sensor_range($grid, $reading->sensor, $reading->range);
     }
 
     return $grid;
 }
 
-function main(string $filename, bool $verbose)
+function bounds(array $readings)
 {
-    $grid = draw_sensor_data(parse($filename));
+    $r = array_pop($readings);
+    $min_x = $r->sensor->x - $r->range;
+    $max_x = $r->sensor->x + $r->range;
+    $min_y = $r->sensor->y - $r->range;
+    $max_y = $r->sensor->y + $r->range;
 
-    $size = grid_size($grid);
-    display_grid($grid, $verbose);
+    foreach ($readings as $r) {
+        $min_x = min($min_x, $r->sensor->x - $r->range);
+        $max_x = max($max_x, $r->sensor->x + $r->range);
+        $min_y = min($min_y, $r->sensor->y - $r->range);
+        $max_y = max($max_y, $r->sensor->y + $r->range);
+    }
 
-    $check_row = $filename === 'input' ? 2000000 : 10;
+    return (object) compact('min_x', 'min_y', 'max_x', 'max_y');
+}
 
-    $no_beacon = count(array_filter($grid[$check_row], fn($i) => $i !== 'B'));
+function main(string $filename, int $y, bool $verbose)
+{
+    $readings = iterator_to_array(parse($filename));
+
+    if ($verbose) {
+        $grid = draw_sensor_data($readings);
+
+        $size = grid_size($grid);
+        display_grid($grid, $verbose);
+    }
+
+    $beacons = [];
+    foreach ($readings as $r) {
+        $beacon_identifier = sprintf('%d,%d', $r->beacon->x, $r->beacon->y);
+        $beacons[$beacon_identifier] = true;
+    }
+
+    $bounds = bounds($readings);
+    print_r(compact('bounds', 'beacons'));
+
+    $no_beacon = 0;
+    for ($x = $bounds->min_x; $x < $bounds->max_x; $x++) {
+        if (!empty($beacons["$x,$y"])) {
+            if ($verbose) {
+                echo 'B';
+            }
+            continue;
+        }
+
+        $current = (object) compact('x', 'y');
+
+        $occupied = false;
+        foreach ($readings as $r) {
+            $distance_to_sensor = distance($r->sensor, $current);
+            if ($distance_to_sensor <= $r->range) {
+                $no_beacon++;
+                $occupied = true;
+                break;
+            }
+        }
+        if ($verbose) {
+            echo $occupied ? '#' : '.';
+        }
+    }
 
     return $no_beacon;
 }
 
 function part1(string $filename, bool $verbose)
 {
-    return main($filename, $verbose);
+    $check_row = str_contains($filename, 'input') ? 2000000 : 10;
+
+    return main($filename, $check_row, $verbose);
 }
 
+/*
 function part2(string $filename, bool $verbose)
 {
     return main($filename, $verbose);
 }
+                */
 
 run_part1('example', true, 26);
 run_part1('input', false);
