@@ -1,6 +1,6 @@
 #!/bin/sh
 
-RECENTLY_EDITED=`ls -t 2022/*.php | head --lines=1`
+RECENTLY_EDITED=`ls -t 2023/*.php | head --lines=1`
 
 node_modules/.bin/nodemon --watch . --ext php --exec "php $RECENTLY_EDITED"
 
