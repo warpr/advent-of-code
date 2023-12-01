@@ -43,9 +43,9 @@ function grid_size(array $grid)
     return (object) compact('min_x', 'min_y', 'max_x', 'max_y');
 }
 
-function display_grid(array $grid, bool $verbose)
+function display_grid(array $grid, bool $verbose, $bounds = null)
 {
-    $size = grid_size($grid);
+    $size = $bounds ? $bounds : grid_size($grid);
 
     if (!$verbose) {
         return;
@@ -118,14 +118,15 @@ function bounds(array $readings)
     return (object) compact('min_x', 'min_y', 'max_x', 'max_y');
 }
 
-function main(string $filename, int $y, bool $verbose)
+function part1(string $filename, bool $verbose)
 {
+    $y = str_contains($filename, 'input') ? 2000000 : 10;
+
     $readings = iterator_to_array(parse($filename));
 
     if ($verbose) {
         $grid = draw_sensor_data($readings);
 
-        $size = grid_size($grid);
         display_grid($grid, $verbose);
     }
 
@@ -166,25 +167,65 @@ function main(string $filename, int $y, bool $verbose)
     return $no_beacon;
 }
 
-function part1(string $filename, bool $verbose)
-{
-    $check_row = str_contains($filename, 'input') ? 2000000 : 10;
-
-    return main($filename, $check_row, $verbose);
-}
-
-/*
 function part2(string $filename, bool $verbose)
 {
-    return main($filename, $verbose);
+    $max = str_contains($filename, 'input') ? 4000000 : 20;
+    $bounds = (object) ['min_x' => 0, 'min_y' => 0, 'max_x' => $max, 'max_y' => $max];
+
+    $readings = iterator_to_array(parse($filename));
+
+    if ($verbose) {
+        $grid = draw_sensor_data($readings);
+        display_grid($grid, $verbose, $bounds);
+    }
+
+    $beacons = [];
+    foreach ($readings as $r) {
+        $beacon_identifier = sprintf('%d,%d', $r->beacon->x, $r->beacon->y);
+        $beacons[$beacon_identifier] = true;
+    }
+
+    $distress_beacon = null;
+
+    $count = 0;
+    $to_check = $bounds->max_y - $bounds->min_y;
+
+    for ($y = $bounds->min_y; $y < $bounds->max_y; $y++) {
+        printf("Checking %d of %d ... \n", $count++, $to_check);
+
+        for ($x = $bounds->min_x; $x < $bounds->max_x; $x++) {
+            if (!empty($beacons["$x,$y"])) {
+                continue;
+            }
+
+            $current = (object) compact('x', 'y');
+
+            $occupied = false;
+            foreach ($readings as $r) {
+                $distance_to_sensor = distance($r->sensor, $current);
+                if ($distance_to_sensor <= $r->range) {
+                    $occupied = true;
+                    break;
+                }
+            }
+
+            if (!$occupied) {
+                $distress_beacon = $current;
+                break 2;
+            }
+        }
+    }
+
+    $answer = $distress_beacon->x * 4000000 + $distress_beacon->y;
+    print_r(compact('distress_beacon', 'answer'));
+
+    return $answer;
 }
-                */
 
 run_part1('example', true, 26);
 run_part1('input', false);
 echo "\n";
-/*
-run_part2('example', true, 93);
+
+run_part2('example', true, 56000011);
 run_part2('input', false);
 echo "\n";
-*/
