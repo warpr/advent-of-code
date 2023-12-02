@@ -76,16 +76,6 @@ function main(string $filename, bool $verbose, bool $part2)
     return array_sum($values);
 }
 
-function part1(string $filename, bool $verbose)
-{
-    return main($filename, $verbose, false);
-}
-
-function part2(string $filename, bool $verbose)
-{
-    return main($filename, $verbose, true);
-}
-
 run_part1('example', true, 142);
 run_part1('input', false);
 echo "\n";

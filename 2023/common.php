@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-function runner($func, $filename, $verbose = null, $expected = null)
+function runner($filename, $verbose = null, $part_no = 1, $expected = null)
 {
     chdir(__DIR__);
 
-    $actual = $func($filename, $verbose);
+    $actual = main($filename, $verbose, $part_no == 2);
     if ($expected) {
         if ($actual !== $expected) {
             echo "You broke $filename, expected: $expected, actual: $actual.\n";
@@ -28,10 +28,9 @@ function run_part($part_no, $input_name, $verbose = false, $expected = null)
     }
 
     $day = hexdec($matches[1]);
-    $part = "part$part_no";
     $filename = sprintf('day-0x%02x.%s.txt', $day, $input_name);
 
-    runner($part, $filename, $verbose, $expected);
+    runner($filename, $verbose, $part_no, $expected);
 }
 
 function run_part1($input_name, $verbose = false, $expected = null)
