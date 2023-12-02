@@ -20,16 +20,29 @@ function word_to_digit(array $matches)
         'nine',
     ]);
 
-    return $mapping[$word] . $word;
+    // a bit hacky, this turns eight into 8ight,
+    // which ensures that lines such as "eighthree"
+    // get parsed as 83.
+    return $mapping[$word] . substr($word, 1);
 }
 
 function replace_digits(string $line)
 {
-    return preg_replace_callback(
-        '/(one|two|three|four|five|six|seven|eight|nine|zero)/',
-        'word_to_digit',
-        $line
-    );
+    $input = $line;
+    $output = null;
+
+    // loop for a bit, a first pass may turn eighthree into 8ighthree,
+    // needing a second pass to get 8ight3hree
+    while ($output != $input) {
+        $input = $output ?? $line;
+        $output = preg_replace_callback(
+            '/(one|two|three|four|five|six|seven|eight|nine|zero)/',
+            'word_to_digit',
+            $input
+        );
+    }
+
+    return $output;
 }
 
 function parse(string $filename, bool $verbose, bool $part2)
@@ -47,13 +60,6 @@ function parse(string $filename, bool $verbose, bool $part2)
         preg_match("/.*([0-9])[^0-9]*$/", $line, $matches);
         $last = $matches[1];
         $ret[] = (int) "{$first}{$last}";
-
-        if ($verbose) {
-            echo "\n";
-            echo "before: $before\n";
-            echo "after:  $line\n";
-            echo "digits: {$first}{$last}\n";
-        }
     }
 
     return $ret;
