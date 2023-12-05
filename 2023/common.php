@@ -2,6 +2,21 @@
 
 declare(strict_types=1);
 
+function display_percentage(string $msg, int $start, int $end, int $current)
+{
+    static $prev = 0;
+
+    if (time() - $prev < 2) {
+        return;
+    }
+
+    $total = $end - $start;
+    $percentage = (int) round(($current / $total) * 100);
+    echo '[' . str_pad("$percentage", 4, ' ', STR_PAD_LEFT) . "%] $msg\n";
+
+    $prev = time();
+}
+
 function runner($filename, $verbose = null, $part_no = 1, $expected = null)
 {
     chdir(__DIR__);

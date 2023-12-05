@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+// ini_set('memory_limit','4096M');
+
 require_once __DIR__ . '/common.php';
 
-function find_location(bool $verbose, array $almanac, string $from, string $final, int $value)
+function find_location(bool $verbose, array &$almanac, string $from, string $final, int $value)
 {
     $ranges = $almanac[$from];
     $to = array_keys($ranges)[0];
@@ -70,38 +72,51 @@ function parse(string $filename, bool $verbose, bool $part2)
         }
     }
 
-    $ret = [];
-    foreach ($almanac['seeds'] as $seed) {
-        $ret[] = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
-        vecho($verbose, "-------\n");
+    $smallest = PHP_INT_MAX;
+
+    if ($part2) {
+        $pairs = [];
+        for ($i = 0; $i < count($almanac['seeds']); $i += 2) {
+            $pairs[] = [$almanac['seeds'][$i], $almanac['seeds'][$i + 1]];
+        }
+
+        $ranges = count($pairs);
+        foreach ($pairs as $idx => $seed_range) {
+            $start = (int) $seed_range[0];
+            $end = (int) $seed_range[0] + (int) $seed_range[1];
+            for ($seed = $start; $seed < $end; $seed++) {
+                $msg = "Processing ($idx of $ranges), seed $seed ($start to $end)";
+                display_percentage($msg, $start, $end, $seed);
+
+                $loc = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
+                if ($loc < $smallest) {
+                    $smallest = $loc;
+                }
+            }
+            vecho($verbose, "----\n");
+        }
+    } else {
+        foreach ($almanac['seeds'] as $seed) {
+            $loc = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
+            if ($loc < $smallest) {
+                $smallest = $loc;
+            }
+            vecho($verbose, "-------\n");
+        }
     }
 
-    return $ret;
+    return $smallest;
 }
 
 function main(string $filename, bool $verbose, bool $part2)
 {
-    $values = parse($filename, $verbose, $part2);
-
-    if ($verbose) {
-        print_r(compact('values'));
-    }
-
-    return min($values);
+    return parse($filename, $verbose, $part2);
 }
 
-/*
-    Seed 79, soil 81, fertilizer 81, water 81, light 74, temperature 78, humidity 78, location 82.
-    Seed 14, soil 14, fertilizer 53, water 49, light 42, temperature 42, humidity 43, location 43.
-    Seed 55, soil 57, fertilizer 57, water 53, light 46, temperature 82, humidity 82, location 86.
-    Seed 13, soil 13, fertilizer 52, water 41, light 34, temperature 34, humidity 35, location 35.
-*/
-
-run_part1('example', true, 35);
+run_part1('example', false, 35);
 run_part1('input', false);
 echo "\n";
-/*
-run_part2('example', true, 30);
+
+run_part2('example', true, 46);
 run_part2('input', false);
 echo "\n";
-*/
