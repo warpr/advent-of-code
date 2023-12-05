@@ -9,8 +9,6 @@ function find_location(bool $verbose, array $almanac, string $from, string $fina
     $ranges = $almanac[$from];
     $to = array_keys($ranges)[0];
 
-    //    print_r($ranges[$to]);
-
     $new_value = null;
 
     foreach ($ranges[$to] as $range) {
@@ -42,8 +40,8 @@ function record_range(array $almanac, array $mapping, array $range)
     $to = $mapping[1];
 
     $data = [
-        $from => $range[0],
-        $to => $range[1],
+        $from => $range[1],
+        $to => $range[0],
         'range' => $range[2],
     ];
 
@@ -72,17 +70,11 @@ function parse(string $filename, bool $verbose, bool $part2)
         }
     }
 
-    find_location($verbose, $almanac, 'seed', 'location', (int) $almanac['seeds'][0]);
-    echo "======\n";
-    find_location($verbose, $almanac, 'seed', 'location', (int) $almanac['seeds'][1]);
-
     $ret = [];
-    /*
     foreach ($almanac['seeds'] as $seed) {
         $ret[] = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
         vecho($verbose, "-------\n");
     }
-     */
 
     return $ret;
 }
@@ -92,19 +84,17 @@ function main(string $filename, bool $verbose, bool $part2)
     $values = parse($filename, $verbose, $part2);
 
     if ($verbose) {
-        //        print_r(compact('values'));
+        print_r(compact('values'));
     }
 
-    return array_sum($values);
+    return min($values);
 }
 
 /*
-
     Seed 79, soil 81, fertilizer 81, water 81, light 74, temperature 78, humidity 78, location 82.
     Seed 14, soil 14, fertilizer 53, water 49, light 42, temperature 42, humidity 43, location 43.
     Seed 55, soil 57, fertilizer 57, water 53, light 46, temperature 82, humidity 82, location 86.
     Seed 13, soil 13, fertilizer 52, water 41, light 34, temperature 34, humidity 35, location 35.
-
 */
 
 run_part1('example', true, 35);
