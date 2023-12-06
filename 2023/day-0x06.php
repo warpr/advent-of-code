@@ -2,121 +2,85 @@
 
 declare(strict_types=1);
 
-// ini_set('memory_limit','4096M');
-
 require_once __DIR__ . '/common.php';
 
-function find_location(bool $verbose, array &$almanac, string $from, string $final, int $value)
+function analyze_race(bool $verbose, int $time, int $distance)
 {
-    $ranges = $almanac[$from];
-    $to = array_keys($ranges)[0];
+    $ret = [];
 
-    $new_value = null;
+    for ($held = 0; $held <= $time; $held++) {
+        $speed = $held;
+        $left = $time - $held;
+        $run = $speed * $left;
+        vecho(
+            $verbose,
+            "Button held $held, speed $speed, total distance is ($speed * $left): $run ..."
+        );
 
-    foreach ($ranges[$to] as $range) {
-        $range_start = $range[$from];
-        $range_end = $range_start + $range['range'];
-
-        if ($range_start <= $value && $range_end > $value) {
-            vecho($verbose, "$from $value is in range ($range_start, $range_end)\n");
-            $new_value = $value - $range[$from] + $range[$to];
-            vecho($verbose, "$from $value is $to $new_value\n");
+        if ($run > $distance) {
+            vecho($verbose, " a winning race\n");
+            $ret[] = $held;
+        } else {
+            vecho($verbose, " NOT a winning race\n");
         }
     }
 
-    if ($new_value === null) {
-        $new_value = $value;
-        vecho($verbose, "$from $value is $to $new_value (default)\n");
-    }
-
-    if ($to === $final) {
-        return $new_value;
-    }
-
-    return find_location($verbose, $almanac, $to, $final, $new_value);
+    return $ret;
 }
 
-function record_range(array $almanac, array $mapping, array $range)
-{
-    $from = $mapping[0];
-    $to = $mapping[1];
-
-    $data = [
-        $from => $range[1],
-        $to => $range[0],
-        'range' => $range[2],
-    ];
-
-    @$almanac[$from][$to][] = $data;
-
-    return $almanac;
-}
+/*
+    Don't hold the button at all (that is, hold it for 0 milliseconds) at the start of the race. The boat won't move; it will have traveled 0 millimeters by the end of the race.
+    Hold the button for 1 millisecond at the start of the race. Then, the boat will travel at a speed of 1 millimeter per millisecond for 6 milliseconds, reaching a total distance traveled of 6 millimeters.
+    Hold the button for 2 milliseconds, giving the boat a speed of 2 millimeters per millisecond. It will then get 5 milliseconds to move, reaching a total distance of 10 millimeters.
+    Hold the button for 3 milliseconds. After its remaining 4 milliseconds of travel time, the boat will have gone 12 millimeters.
+    Hold the button for 4 milliseconds. After its remaining 3 milliseconds of travel time, the boat will have gone 12 millimeters.
+    Hold the button for 5 milliseconds, causing the boat to travel a total of 10 millimeters.
+    Hold the button for 6 milliseconds, causing the boat to travel a total of 6 millimeters.
+    Hold the button for 7 milliseconds. That's the entire duration of the race. You never let go of the button. The boat can't move until you let go of the button. Please make sure you let go of the button so the boat gets to move. 0 millimeters.
+*/
 
 function parse(string $filename, bool $verbose, bool $part2)
 {
     $lines = file($filename);
 
-    $almanac = [];
-
-    $current_map = null;
-
+    $input = [];
     foreach ($lines as $line) {
         $line = trim($line);
-
-        if (preg_match('/^seeds:(.*)/', $line, $matches)) {
-            $almanac['seeds'] = explode(' ', trim($matches[1]));
-        } elseif (preg_match('/(.*)-to-(.*) map:/', $line, $matches)) {
-            $current_map = [$matches[1], $matches[2]];
-        } elseif (!empty($line) && !empty($current_map)) {
-            $almanac = record_range($almanac, $current_map, explode(' ', trim($line)));
+        if (empty($line)) {
+            continue;
         }
+
+        list($field, $values) = explode(':', $line);
+        $input[$field] = array_values(array_filter(explode(' ', trim($values))));
     }
 
-    $smallest = PHP_INT_MAX;
+    $values = [];
 
-    if ($part2) {
-        $pairs = [];
-        for ($i = 0; $i < count($almanac['seeds']); $i += 2) {
-            $pairs[] = [$almanac['seeds'][$i], $almanac['seeds'][$i + 1]];
-        }
-
-        $ranges = count($pairs);
-        foreach ($pairs as $idx => $seed_range) {
-            $start = (int) $seed_range[0];
-            $end = (int) $seed_range[0] + (int) $seed_range[1];
-            for ($seed = $start; $seed < $end; $seed++) {
-                $msg = "Processing ($idx of $ranges), seed $seed ($start to $end)";
-                display_percentage($msg, $start, $end, $seed);
-
-                $loc = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
-                if ($loc < $smallest) {
-                    $smallest = $loc;
-                }
-            }
-            vecho($verbose, "----\n");
-        }
-    } else {
-        foreach ($almanac['seeds'] as $seed) {
-            $loc = find_location($verbose, $almanac, 'seed', 'location', (int) $seed);
-            if ($loc < $smallest) {
-                $smallest = $loc;
-            }
-            vecho($verbose, "-------\n");
-        }
+    foreach ($input['Time'] as $race_no => $time) {
+        $distance = $input['Distance'][$race_no];
+        $winning_races = analyze_race($verbose, (int) $time, (int) $distance);
+        $values[$race_no] = count($winning_races);
     }
 
-    return $smallest;
+    return $values;
 }
 
 function main(string $filename, bool $verbose, bool $part2)
 {
-    return parse($filename, $verbose, $part2);
+    $values = parse($filename, $verbose, $part2);
+
+    if ($verbose) {
+        print_r(compact('values'));
+    }
+
+    return array_product($values);
 }
 
-run_part1('example', false, 35);
+run_part1('example', true, 288);
 run_part1('input', false);
 echo "\n";
-
-run_part2('example', true, 46);
+/*
+run_part2('example', true, 71503);
 run_part2('input', false);
 echo "\n";
+*/
