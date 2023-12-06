@@ -6,38 +6,34 @@ require_once __DIR__ . '/common.php';
 
 function analyze_race(bool $verbose, int $time, int $distance)
 {
-    $ret = [];
+    $total_races = $time;
+    $losing_start = 0;
+    $losing_end = 0;
 
     for ($held = 0; $held <= $time; $held++) {
         $speed = $held;
         $left = $time - $held;
         $run = $speed * $left;
-        vecho(
-            $verbose,
-            "Button held $held, speed $speed, total distance is ($speed * $left): $run ..."
-        );
 
         if ($run > $distance) {
-            vecho($verbose, " a winning race\n");
-            $ret[] = $held;
-        } else {
-            vecho($verbose, " NOT a winning race\n");
+            $losing_start = $held;
+            break;
         }
     }
 
-    return $ret;
-}
+    for ($held = $time; $held > 0; $held--) {
+        $speed = $held;
+        $left = $time - $held;
+        $run = $speed * $left;
 
-/*
-    Don't hold the button at all (that is, hold it for 0 milliseconds) at the start of the race. The boat won't move; it will have traveled 0 millimeters by the end of the race.
-    Hold the button for 1 millisecond at the start of the race. Then, the boat will travel at a speed of 1 millimeter per millisecond for 6 milliseconds, reaching a total distance traveled of 6 millimeters.
-    Hold the button for 2 milliseconds, giving the boat a speed of 2 millimeters per millisecond. It will then get 5 milliseconds to move, reaching a total distance of 10 millimeters.
-    Hold the button for 3 milliseconds. After its remaining 4 milliseconds of travel time, the boat will have gone 12 millimeters.
-    Hold the button for 4 milliseconds. After its remaining 3 milliseconds of travel time, the boat will have gone 12 millimeters.
-    Hold the button for 5 milliseconds, causing the boat to travel a total of 10 millimeters.
-    Hold the button for 6 milliseconds, causing the boat to travel a total of 6 millimeters.
-    Hold the button for 7 milliseconds. That's the entire duration of the race. You never let go of the button. The boat can't move until you let go of the button. Please make sure you let go of the button so the boat gets to move. 0 millimeters.
-*/
+        if ($run > $distance) {
+            $losing_end = $time - $held - 1;
+            break;
+        }
+    }
+
+    return $total_races - $losing_start - $losing_end;
+}
 
 function parse(string $filename, bool $verbose, bool $part2)
 {
@@ -56,10 +52,15 @@ function parse(string $filename, bool $verbose, bool $part2)
 
     $values = [];
 
+    if ($part2) {
+        $time = (int) implode('', $input['Time']);
+        $distance = (int) implode('', $input['Distance']);
+        return analyze_race($verbose, (int) $time, (int) $distance);
+    }
+
     foreach ($input['Time'] as $race_no => $time) {
         $distance = $input['Distance'][$race_no];
-        $winning_races = analyze_race($verbose, (int) $time, (int) $distance);
-        $values[$race_no] = count($winning_races);
+        $values[$race_no] = analyze_race($verbose, (int) $time, (int) $distance);
     }
 
     return $values;
@@ -67,6 +68,10 @@ function parse(string $filename, bool $verbose, bool $part2)
 
 function main(string $filename, bool $verbose, bool $part2)
 {
+    if ($part2) {
+        return parse($filename, $verbose, $part2);
+    }
+
     $values = parse($filename, $verbose, $part2);
 
     if ($verbose) {
@@ -79,8 +84,7 @@ function main(string $filename, bool $verbose, bool $part2)
 run_part1('example', true, 288);
 run_part1('input', false);
 echo "\n";
-/*
+
 run_part2('example', true, 71503);
 run_part2('input', false);
 echo "\n";
-*/
