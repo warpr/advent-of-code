@@ -7,14 +7,36 @@ require_once __DIR__ . '/common.php';
 function hand_type(string $hand)
 {
     $count = [];
+    $jokers = 0;
 
     $parts = str_split($hand);
     foreach ($parts as $card) {
-        @$count[$card]++;
+        if ($card == '0') {
+            $jokers++;
+        } else {
+            @$count[$card]++;
+        }
+    }
+
+    if ($jokers > 3) {
+        // five jokers is obviously a five-of-a-kind
+        // four jokers is also five-of-a-kind, because
+        // they can match the one remaining non-joker.
+        return '5';
     }
 
     $count = array_values($count);
     rsort($count);
+
+    while ($jokers > 0) {
+        foreach ($count as $idx => $group) {
+            if ($group < 5) {
+                $count[$idx]++;
+                $jokers--;
+                break;
+            }
+        }
+    }
 
     // this will sort correctly as strings, e.g. full
     // house is represented as "3-2", one pair as
@@ -46,13 +68,19 @@ function parse(string $filename, bool $verbose, bool $part2)
 
         list($hand, $bid) = explode(' ', $line);
 
+        $replacements = ['B', 'C', 'D', 'E', 'F'];
+        if ($part2) {
+            $replacements = ['B', '0', 'D', 'E', 'F'];
+        }
+
         // replace card names to make them
         // string sortable.
-        $hand = str_replace(['T', 'J', 'Q', 'K', 'A'], ['B', 'C', 'D', 'E', 'F'], $hand);
+        $hand = str_replace(['T', 'J', 'Q', 'K', 'A'], $replacements, $hand);
         $hands[$hand] = $bid;
     }
 
     uksort($hands, 'cmp_hands');
+
     if ($verbose) {
         print_r(['sorted' => $hands]);
     }
@@ -82,8 +110,7 @@ function main(string $filename, bool $verbose, bool $part2)
 run_part1('example', true, 6440);
 run_part1('input', false);
 echo "\n";
-/*
-run_part2('example', true, 71503);
+
+run_part2('example', true, 5905);
 run_part2('input', false);
 echo "\n";
-*/
