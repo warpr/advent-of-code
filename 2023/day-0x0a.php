@@ -4,108 +4,147 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-function pairs(array $arr)
+function invert_dir(string $dir)
 {
-    if (count($arr) < 2) {
-        return [];
-    }
-
-    for ($i = 1; $i < count($arr); $i++) {
-        yield [$arr[$i - 1], $arr[$i]];
+    switch ($dir) {
+        case 'N':
+            return 'S';
+        case 'E':
+            return 'W';
+        case 'S':
+            return 'N';
+        case 'W':
+            return 'E';
     }
 }
 
-function is_all_zeroes(array $arr)
+function find_start(array $grid)
 {
-    foreach ($arr as $item) {
-        if ($item !== 0) {
-            return false;
+    foreach ($grid as $y => $row) {
+        $x = strpos($row, 'S');
+        if ($x !== false) {
+            return [$x, $y];
         }
     }
 
-    return true;
+    echo "Start not found\n";
+    die();
 }
 
-function process_history(bool $verbose, array $history)
-{
-    $log = [$history];
+function follow_pipe(
+    bool $verbose,
+    array $grid,
+    array $current,
+    string $from,
+    string $pipe_override = null
+) {
+    $directions = [
+        'N' => [$current[0], $current[1] - 1],
+        'E' => [$current[0] + 1, $current[1]],
+        'S' => [$current[0], $current[1] + 1],
+        'W' => [$current[0] - 1, $current[1]],
+    ];
 
-    $tmp = $history;
-    do {
-        $tmp = array_map(fn($i) => $i[1] - $i[0], iterator_to_array(pairs($tmp)));
-        $log[] = $tmp;
-    } while (!is_all_zeroes($tmp));
+    $pipe_mapping = [
+        '|' => ['N', 'S'],
+        '-' => ['E', 'W'],
+        'L' => ['N', 'E'],
+        'J' => ['N', 'W'],
+        '7' => ['W', 'S'],
+        'F' => ['E', 'S'],
+    ];
 
-    $log = array_reverse($log);
-    $last_item = 0;
-    foreach ($log as $idx => $record) {
-        $last_item = end($record) + $last_item;
-        $log[$idx][] = $last_item;
+    $pipe = $grid[$current[1]][$current[0]];
+    if ($pipe === 'S') {
+        $pipe = $pipe_override;
     }
 
-    $result = array_pop($log);
-    return array_pop($result);
+    $dirs = $pipe_mapping[$pipe] ?? null;
+    if (empty($dirs)) {
+        return null;
+    }
+
+    $diff = array_diff($dirs, [$from]);
+    if (count($diff) != 1) {
+        return null;
+    }
+    $next_dir = array_pop($diff);
+
+    return [
+        'coord' => $directions[$next_dir],
+        'from' => invert_dir($next_dir),
+    ];
 }
 
-function process_history_part2(bool $verbose, array $history)
+function find_loop(bool $verbose, array $grid, array $start, string $dir, string $pipe_override)
 {
-    $log = [$history];
+    $coords = [$start];
 
-    $tmp = $history;
-    do {
-        $tmp = array_map(fn($i) => $i[1] - $i[0], iterator_to_array(pairs($tmp)));
-        $log[] = $tmp;
-    } while (!is_all_zeroes($tmp));
+    $current = $start;
+    while (true) {
+        $next_step = follow_pipe($verbose, $grid, $current, $dir, $pipe_override);
+        if (!$next_step) {
+            return null;
+        }
 
-    $log = array_reverse($log);
-    $last_item = 0;
-    foreach ($log as $idx => $record) {
-        $last_item = $record[0] - $last_item;
-        $log[$idx] = array_merge([$last_item], $record);
+        $next_chr = $grid[$next_step['coord'][1]][$next_step['coord'][0]];
+        if ($next_chr === '.') {
+            return null;
+        }
+
+        if ($next_chr === 'S') {
+            return $coords;
+        }
+
+        $current = $next_step['coord'];
+        $dir = $next_step['from'];
+        $coords[] = $current;
     }
-
-    $result = array_pop($log);
-    return array_shift($result);
 }
 
 function parse(string $filename, bool $verbose, bool $part2)
 {
     $lines = file($filename);
 
-    $ret = [];
+    $grid = [];
     foreach ($lines as $line) {
-        $history = array_map(fn($i) => (int) trim($i), explode(' ', $line));
-        if (empty($history)) {
-            continue;
-        }
+        $grid[] = trim($line);
+    }
 
-        if ($part2) {
-            $ret[] = process_history_part2($verbose, $history);
-        } else {
-            $ret[] = process_history($verbose, $history);
+    if ($verbose) {
+        print_r($grid);
+    }
+
+    $start = find_start($grid);
+
+    $starting_directions = [
+        'N' => '|',
+        'E' => '-',
+        'S' => '|',
+        'W' => '-',
+    ];
+
+    foreach ($starting_directions as $dir => $pipe_override) {
+        $path = find_loop($verbose, $grid, $start, $dir, $pipe_override);
+        if ($path) {
+            break;
         }
     }
 
-    return $ret;
+    return (int) round(count($path) / 2);
 }
 
 function main(string $filename, bool $verbose, bool $part2)
 {
-    $values = parse($filename, $verbose, $part2);
-
-    if ($verbose) {
-        print_r(compact('values'));
-    }
-
-    // 5 -3 0
-
-    return array_sum($values);
+    return parse($filename, $verbose, $part2);
 }
 
-run_part1('example', false, 114);
+run_part1('example', true, 4);
+run_part1('example2', false, 8);
 run_part1('input', false);
 echo "\n";
-
+/*
 run_part2('example', true, 2);
 run_part2('input', false);
 echo "\n";
+*/
