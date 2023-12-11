@@ -4,203 +4,105 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-function pipe_mapping()
+function display_grid(bool $verbose, array $grid)
 {
-    return [
-        '|' => ['N', 'S'],
-        '-' => ['E', 'W'],
-        'L' => ['E', 'N'],
-        'J' => ['N', 'W'],
-        '7' => ['S', 'W'],
-        'F' => ['E', 'S'],
-    ];
-}
+    if (!$verbose) {
+        return;
+    }
 
-function find_direction(array $a, array $b)
-{
-    if ($a[0] === $b[0]) {
-        return $a[1] < $b[1] ? 'S' : 'N';
-    } else {
-        return $a[0] < $b[0] ? 'W' : 'E';
+    foreach ($grid as $idx => $row) {
+        echo str_pad("$idx", 4, ' ', STR_PAD_LEFT);
+        echo '. ' . implode('', $row) . "\n";
     }
 }
 
-function patch_grid(array &$grid, array $start, array $start_shape)
+function get_column(array &$grid, int $col)
 {
-    sort($start_shape);
+    $ret = [];
+    foreach ($grid as $row) {
+        $ret[] = $row[$col];
+    }
+    return $ret;
+}
 
-    foreach (pipe_mapping() as $chr => $shape) {
-        if ($start_shape == $shape) {
-            $grid[$start[1]][$start[0]] = $chr;
+function expand(array $grid)
+{
+    $max_y = count($grid);
+    $max_x = count($grid[0]);
+
+    // print_r(compact('max_x', 'max_y'));
+
+    $add_columns = [];
+    for ($x = 0; $x < $max_x; $x++) {
+        // is column empty?
+        $galaxies = array_filter(get_column($grid, $x), fn($i) => $i === '#');
+        if (empty($galaxies)) {
+            $add_columns[] = $x;
         }
     }
-}
 
-function invert_dir(string $dir)
-{
-    switch ($dir) {
-        case 'N':
-            return 'S';
-        case 'E':
-            return 'W';
-        case 'S':
-            return 'N';
-        case 'W':
-            return 'E';
+    $add_rows = [];
+    for ($y = 0; $y < $max_y; $y++) {
+        $galaxies = array_filter($grid[$y], fn($i) => $i === '#');
+        if (empty($galaxies)) {
+            $add_rows[] = $y;
+        }
     }
+
+    $add_columns = array_reverse($add_columns);
+    $add_rows = array_reverse($add_rows);
+
+    // print_r(compact('add_columns', 'add_rows'));
+
+    foreach ($add_columns as $x) {
+        foreach ($grid as $y => &$row) {
+            array_splice($row, $x, 0, ['.']);
+        }
+    }
+
+    $max_x = count($grid[0]);
+    foreach ($add_rows as $y) {
+        $empty_row = array_fill(0, $max_x, '.');
+        array_splice($grid, $y, 0, [$empty_row]);
+    }
+
+    return $grid;
 }
 
-function find_start(array $grid)
+function find_galaxies(array &$grid)
 {
     foreach ($grid as $y => $row) {
-        $x = strpos($row, 'S');
-        if ($x !== false) {
-            return [$x, $y];
+        foreach ($row as $x => $chr) {
+            if ($chr === '#') {
+                yield [$x, $y];
+            }
         }
     }
-
-    echo "Start not found\n";
-    die();
 }
 
-function follow_pipe(
-    bool $verbose,
-    array $grid,
-    array $current,
-    string $from,
-    string $pipe_override = null
-) {
-    $pipe_mapping = pipe_mapping();
-
-    $directions = [
-        'N' => [$current[0], $current[1] - 1],
-        'E' => [$current[0] + 1, $current[1]],
-        'S' => [$current[0], $current[1] + 1],
-        'W' => [$current[0] - 1, $current[1]],
-    ];
-
-    $pipe = $grid[$current[1]][$current[0]];
-    if ($pipe === 'S') {
-        $pipe = $pipe_override;
-    }
-
-    $dirs = $pipe_mapping[$pipe] ?? null;
-    if (empty($dirs)) {
-        return null;
-    }
-
-    $diff = array_diff($dirs, [$from]);
-    if (count($diff) != 1) {
-        return null;
-    }
-    $next_dir = array_pop($diff);
-
-    return [
-        'coord' => $directions[$next_dir],
-        'from' => invert_dir($next_dir),
-    ];
-}
-
-function find_loop(bool $verbose, array &$grid, array $start, string $dir, string $pipe_override)
+function pairs(array $coords)
 {
-    $coords = [$start];
+    $ret = [];
 
-    $current = $start;
-    while (true) {
-        $next_step = follow_pipe($verbose, $grid, $current, $dir, $pipe_override);
-        if (!$next_step) {
-            return null;
+    foreach ($coords as $a) {
+        foreach ($coords as $b) {
+            $coords_str = array_unique([implode(',', $a), implode(',', $b)]);
+            if (count($coords_str) > 1) {
+                sort($coords_str);
+                $key = implode(' ', $coords_str);
+                $ret[$key] = [$a, $b];
+            }
         }
-
-        $next_chr = $grid[$next_step['coord'][1]][$next_step['coord'][0]];
-        if ($next_chr === '.') {
-            return null;
-        }
-
-        if ($next_chr === 'S') {
-            return $coords;
-        }
-
-        $current = $next_step['coord'];
-        $dir = $next_step['from'];
-        $coords[] = $current;
     }
+
+    return array_values($ret);
 }
 
-function clear_junk(array &$grid, array $path)
+function distances(array $pairs)
 {
-    $hash = [];
-    foreach ($path as $coord) {
-        $key = implode(',', $coord);
-        $hash[$key] = true;
+    foreach ($pairs as $pair) {
+        yield abs($pair[0][0] - $pair[1][0]) + abs($pair[0][1] - $pair[1][1]);
     }
-
-    foreach ($grid as $y => $row) {
-        foreach (str_split($row) as $x => $chr) {
-            $pos = implode(',', [$x, $y]);
-            if (!array_key_exists($pos, $hash)) {
-                $grid[$y][$x] = '.';
-            }
-        }
-    }
-}
-
-function ray_cast(array &$grid)
-{
-    $pipe_mapping = pipe_mapping();
-
-    $painted = 0;
-    foreach ($grid as $y => $row) {
-        $outside = true;
-
-        $seen = [];
-
-        $debug = $y == 62;
-
-        foreach (str_split($row) as $x => $chr) {
-            $exits = $pipe_mapping[$chr] ?? [];
-
-            if (array_search('N', $exits) !== false) {
-                $seen[] = 'N';
-            }
-
-            if (array_search('S', $exits) !== false) {
-                $seen[] = 'S';
-            }
-
-            if (count($seen) >= 2) {
-                if ($seen[0] !== $seen[1]) {
-                    // crossed N-S or S-N pipe
-                    $outside = !$outside;
-                }
-                $seen = [];
-            }
-
-            if (!$outside && $chr == '.') {
-                $painted++;
-                $grid[$y][$x] = '*';
-            }
-        }
-    }
-
-    return $painted;
-}
-
-function area(bool $verbose, array $grid, array $path)
-{
-    $start = $path[0];
-    $first = $path[1];
-    $last = end($path);
-    $shape = [find_direction($start, $first), find_direction($start, $last)];
-
-    patch_grid($grid, $start, $shape);
-    clear_junk($grid, $path);
-    $painted = ray_cast($grid);
-    if ($verbose) {
-        print_r($grid);
-    }
-
-    return $painted;
 }
 
 function parse(string $filename, bool $verbose, bool $part2)
@@ -209,48 +111,35 @@ function parse(string $filename, bool $verbose, bool $part2)
 
     $grid = [];
     foreach ($lines as $line) {
-        $grid[] = trim($line);
+        $grid[] = str_split(trim($line));
     }
 
-    $start = find_start($grid);
+    $grid = expand($grid);
 
-    $starting_directions = [
-        'E' => '-',
-        'N' => '|',
-        'S' => '|',
-        'W' => '-',
-    ];
+    display_grid($verbose, $grid);
 
-    foreach ($starting_directions as $dir => $pipe_override) {
-        $path = find_loop($verbose, $grid, $start, $dir, $pipe_override);
-        if ($path) {
-            break;
-        }
-    }
+    $pairs = pairs(iterator_to_array(find_galaxies($grid)));
 
-    if ($part2) {
-        return area($verbose, $grid, $path);
-    }
-
-    if ($verbose) {
-        print_r($grid);
-    }
-
-    return (int) round(count($path) / 2);
+    return iterator_to_array(distances($pairs));
 }
 
 function main(string $filename, bool $verbose, bool $part2)
 {
-    return parse($filename, $verbose, $part2);
+    $values = parse($filename, $verbose, $part2);
+
+    if ($verbose) {
+        print_r(compact('values'));
+    }
+
+    return array_sum($values);
 }
 
-run_part1('example', true, 4);
-run_part1('example2', true, 8);
+run_part1('example', true, 374);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example3', true, 4);
-run_part2('example4', true, 8);
-run_part2('example5', true, 10);
+/*
+run_part2('example', true, 4);
 run_part2('input', false);
 echo "\n";
+*/
