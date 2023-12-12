@@ -8,7 +8,8 @@ function permutations(string $record)
 {
     $qmarkpos = strpos($record, '?');
     if ($qmarkpos === false) {
-        return [$record];
+        yield $record;
+        return;
     }
 
     $with_hash = $record;
@@ -17,16 +18,13 @@ function permutations(string $record)
     $with_hash[$qmarkpos] = '#';
     $with_dot[$qmarkpos] = '.';
 
-    $ret = [];
     foreach (permutations($with_hash) as $tmp) {
-        $ret[] = $tmp;
+        yield $tmp;
     }
 
     foreach (permutations($with_dot) as $tmp) {
-        $ret[] = $tmp;
+        yield $tmp;
     }
-
-    return $ret;
 }
 
 function record_validation(string $record)
@@ -62,6 +60,14 @@ function is_record_valid(string $record, array $expected)
     return $actual == $expected;
 }
 
+function unfold(string $record, array $code)
+{
+    $unfolded_record = implode('?', [$record, $record, $record, $record, $record]);
+    $unfolded_code = array_merge([$code, $code, $code, $code, $code]);
+
+    return [$unfolded_record, $unfolded_code];
+}
+
 function parse(string $filename, bool $verbose, bool $part2)
 {
     $lines = file($filename);
@@ -72,11 +78,17 @@ function parse(string $filename, bool $verbose, bool $part2)
         list($record, $verification) = explode(' ', trim($line));
         $code = explode(',', $verification);
 
+        if ($part2) {
+            list($record, $code) = unfold($record, $code);
+        }
+
         foreach (permutations($record) as $a => $attempt) {
             // loop over permutations...
             if (is_record_valid($attempt, $code)) {
                 @$ret[$idx]++;
                 vecho($verbose, "{$idx} v{$a}: {$attempt} (VALID)\n");
+            } else {
+                vecho($verbose, "{$idx} v{$a}: {$attempt} (INVALID)\n");
             }
         }
     }
@@ -97,11 +109,9 @@ function main(string $filename, bool $verbose, bool $part2)
 
 run_part1('example0', true, 6);
 run_part1('example', true, 21);
-run_part1('input', false);
+//run_part1('input', false);
 echo "\n";
 
-/*
-run_part2('example', true, 21);
-run_part2('input', false);
-echo "\n";
-*/
+run_part2('example', true, 525152);
+// run_part2('input', false);
+// echo "\n";
