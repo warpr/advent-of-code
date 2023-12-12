@@ -2,6 +2,18 @@
 
 declare(strict_types=1);
 
+function memoize(callable $fn): callable
+{
+    return function (...$args) use ($fn) {
+        static $cache = [];
+        $key = serialize($args);
+        if (!isset($cache[$key])) {
+            $cache[$key] = $fn(...$args);
+        }
+        return $cache[$key];
+    };
+}
+
 function display_percentage(string $msg, int $start, int $end, int $current)
 {
     static $prev = 0;

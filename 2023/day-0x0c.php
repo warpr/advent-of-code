@@ -2,10 +2,16 @@
 
 declare(strict_types=1);
 
+ini_set('memory_limit', '24576M');
+
 require_once __DIR__ . '/common.php';
+
+$find_valid = memoize(find_valid_permutations(...));
 
 function find_valid_permutations(bool $verbose, int $pos, array $record, array $expected)
 {
+    global $find_valid;
+
     $max = count($record);
 
     //    $prefix = str_pad("", $pos, "-") . "> ";
@@ -61,11 +67,11 @@ function find_valid_permutations(bool $verbose, int $pos, array $record, array $
                 $a = 0;
                 if (!$in_hash_sequence) {
                     $record[$pos] = '.';
-                    $a = find_valid_permutations($verbose, $pos, $record, $expected);
+                    $a = $find_valid($verbose, $pos, $record, $expected);
                 }
 
                 $record[$pos] = '#';
-                $b = find_valid_permutations($verbose, $pos, $record, $expected);
+                $b = $find_valid($verbose, $pos, $record, $expected);
                 return $a + $b;
         }
     }
@@ -96,7 +102,7 @@ function find_valid_permutations(bool $verbose, int $pos, array $record, array $
         $pos++;
     }
 
-    return find_valid_permutations($verbose, $pos, $record, $expected);
+    return $find_valid($verbose, $pos, $record, $expected);
 }
 
 function unfold(string $record, array $code)
@@ -109,6 +115,8 @@ function unfold(string $record, array $code)
 
 function parse(string $filename, bool $verbose, bool $part2)
 {
+    global $find_valid;
+
     $lines = file($filename);
 
     $ret = [];
@@ -123,9 +131,9 @@ function parse(string $filename, bool $verbose, bool $part2)
 
         vecho(
             true,
-            "\n[ $idx ] ___ $record _____ verification code " . implode(',', $code) . " _____\n"
+            "[ $idx ] ___ $record _____ verification code " . implode(',', $code) . " _____\n"
         );
-        $ret[] = find_valid_permutations($verbose, 0, str_split($record), $code);
+        $ret[] = $find_valid($verbose, 0, str_split($record), $code);
     }
 
     return $ret;
@@ -142,11 +150,11 @@ function main(string $filename, bool $verbose, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example0', true, 6);
-run_part1('example', true, 21);
+run_part1('example0', false, 6);
+run_part1('example', false, 21);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 525152);
+run_part2('example', false, 525152);
 run_part2('input', false);
 echo "\n";
