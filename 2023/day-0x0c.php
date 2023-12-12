@@ -4,65 +4,69 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
-function find_valid_permutations(bool $verbose, array $record, array $expected)
+function find_valid_permutations(bool $verbose, int $pos, array $record, array $expected)
 {
-    // vecho($verbose, "searching... " . implode("", $record) . " \t " . implode(",", $expected) . "\n");
+    $max = count($record);
 
-    $ret = 0;
+    //    $prefix = str_pad("", $pos, "-") . "> ";
+    //    vecho ($verbose, $prefix . "searching ($pos) " . implode("", $record) . " \t " . implode(",", $expected) . "\n");
 
-    while ($record && $record[0] === '.') {
-        array_shift($record);
+    while ($pos < $max && $record[$pos] === '.') {
+        $pos++;
     }
 
-    if (empty($record)) {
-        return $ret + (empty($expected) ? 1 : 0);
+    if ($pos >= $max) {
+        $valid = empty($expected);
+        if ($valid) {
+            vecho($verbose, 'VALID foo ' . implode('', $record) . "\n");
+            return 1;
+        }
+        return 0;
     }
 
     if (empty($expected)) {
-        if (array_search('#', $record) === false) {
+        $tmp = array_slice($record, $pos);
+        if (array_search('#', $tmp) === false) {
             // if we no longer expect any sequences of '#', and only '.' and '?'
             // remain, the sequence has one valid solution which is to turn all
             // remaining '?' into '.'.
-            return $ret + 1; // valid
+            for ($i = $pos; $i < $max; $i++) {
+                $record[$i] = '.';
+            }
+
+            vecho($verbose, 'VALID bar ' . implode('', $record) . "\n");
+            return 1; // valid
         } else {
-            return $ret; // no
+            return 0; // no
         }
     }
 
+    $in_hash_sequence = false;
+
     while ($expected[0] > 0) {
-        if (empty($record)) {
+        if ($pos >= $max) {
             // expected sequence of #s is longer, this is not a valid permutation
-            return $ret;
+            return 0;
         }
 
-        switch ($record[0]) {
+        switch ($record[$pos]) {
             case '.':
                 return 0;
             case '#':
                 $expected[0]--;
-                array_shift($record);
+                $pos++;
+                $in_hash_sequence = true;
                 break;
             case '?':
-                $record[0] = '.';
-                $a = find_valid_permutations($verbose, $record, $expected);
-                if ($a) {
-                    vecho(
-                        $verbose,
-                        'VALID ' . implode('', $record) . " \t " . implode(',', $expected) . "\n"
-                    );
-                }
-                $record[0] = '#';
-                $b = find_valid_permutations($verbose, $record, $expected);
-                if ($b) {
-                    vecho(
-                        $verbose,
-                        'VALID ' . implode('', $record) . " \t " . implode(',', $expected) . "\n"
-                    );
+                $a = 0;
+                if (!$in_hash_sequence) {
+                    $record[$pos] = '.';
+                    $a = find_valid_permutations($verbose, $pos, $record, $expected);
                 }
 
-                vecho($verbose, "returning [$ret + $a + $b]\n");
-
-                return $ret + $a + $b;
+                $record[$pos] = '#';
+                $b = find_valid_permutations($verbose, $pos, $record, $expected);
+                return $a + $b;
         }
     }
 
@@ -72,26 +76,33 @@ function find_valid_permutations(bool $verbose, array $record, array $expected)
         die();
     }
 
-    if (empty($record)) {
-        return $ret + (empty($expected) ? 1 : 0);
+    if ($pos >= $max) {
+        $valid = empty($expected);
+        if ($valid) {
+            vecho($verbose, 'VALID baz ' . implode('', $record) . "\n");
+            return 1;
+        }
+        // expected sequence of #s is longer, this is not a valid permutation
+        return 0;
     }
 
-    if ($record[0] === '#') {
+    if ($record[$pos] === '#') {
         // sequence longer than expected, invalid
-        return $ret;
+        return 0;
     }
 
-    if ($record[0] === '?') {
-        $record[0] = '.'; // only option
+    if ($record[$pos] === '?') {
+        $record[$pos] = '.'; // only option
+        $pos++;
     }
 
-    return $ret + find_valid_permutations($verbose, $record, $expected);
+    return find_valid_permutations($verbose, $pos, $record, $expected);
 }
 
 function unfold(string $record, array $code)
 {
     $unfolded_record = implode('?', [$record, $record, $record, $record, $record]);
-    $unfolded_code = array_merge([$code, $code, $code, $code, $code]);
+    $unfolded_code = array_merge($code, $code, $code, $code, $code);
 
     return [$unfolded_record, $unfolded_code];
 }
@@ -110,8 +121,11 @@ function parse(string $filename, bool $verbose, bool $part2)
             list($record, $code) = unfold($record, $code);
         }
 
-        vecho($verbose, "=======[ $idx ]=======\n");
-        $ret[] = find_valid_permutations($verbose, str_split($record), $code);
+        vecho(
+            true,
+            "\n[ $idx ] ___ $record _____ verification code " . implode(',', $code) . " _____\n"
+        );
+        $ret[] = find_valid_permutations($verbose, 0, str_split($record), $code);
     }
 
     return $ret;
@@ -130,9 +144,9 @@ function main(string $filename, bool $verbose, bool $part2)
 
 run_part1('example0', true, 6);
 run_part1('example', true, 21);
-//run_part1('input', false);
+run_part1('input', false);
 echo "\n";
 
-// run_part2('example', true, 525152);
-// run_part2('input', false);
-// echo "\n";
+run_part2('example', true, 525152);
+run_part2('input', false);
+echo "\n";
