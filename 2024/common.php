@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/vecho.php';
+
 function memoize(callable $fn): callable
 {
     return function (...$args) use ($fn) {
@@ -33,7 +35,9 @@ function runner($filename, $verbose = null, $part_no = 1, $expected = null)
 {
     chdir(__DIR__);
 
-    $actual = main($filename, $verbose, $part_no == 2);
+    vecho::$verbose = $verbose;
+
+    $actual = main($filename, $part_no == 2);
     if ($expected) {
         if ($actual !== $expected) {
             echo "You broke $filename, expected: $expected, actual: $actual.\n";
@@ -139,11 +143,4 @@ function sort_by(array $items, string $field)
 function as_array($value)
 {
     return is_array($value) ? $value : [$value];
-}
-
-function vecho(bool $verbose, string $msg)
-{
-    if ($verbose) {
-        echo $msg;
-    }
 }
