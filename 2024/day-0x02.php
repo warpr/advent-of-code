@@ -62,36 +62,21 @@ function retry_without_idx($values, $remove_idx)
 {
     array_splice($values, $remove_idx, 1);
 
-    vecho::msg('RETRY-ING:', implode(', ', $values));
-
     return is_safe($values);
 }
 
-function is_safe_part2($values)
+function is_safe_v2($values)
 {
-    $error_idx = find_error($values);
-
-    if ($error_idx === null) {
+    if (is_safe($values)) {
         return true;
     }
 
-    vecho::msg("\n[ERROR at {$error_idx}]", $values);
+    vecho::msg("\nUNSAFE... ", $values);
 
-    if (retry_without_idx($values, $error_idx)) {
-        vecho::msg('OK after removing index', $error_idx);
-        return true;
-    }
-
-    if ($error_idx > 0) {
-        if (retry_without_idx($values, $error_idx - 1)) {
-            vecho::msg('OK after removing index', $error_idx - 1);
-            return true;
-        }
-    }
-
-    if ($error_idx < array_key_last($values)) {
-        if (retry_without_idx($values, $error_idx + 1)) {
-            vecho::msg('OK after removing index', $error_idx + 1);
+    // let's just brute force it.
+    foreach ($values as $idx => $unused) {
+        if (retry_without_idx($values, $idx)) {
+            vecho::msg('OK after removing index', $idx);
             return true;
         }
     }
@@ -117,7 +102,7 @@ function part2($reports)
 {
     $safe = [];
     foreach ($reports as $idx => $values) {
-        if (is_safe_part2($values)) {
+        if (is_safe_v2($values)) {
             $safe[] = 1;
         }
 
@@ -146,10 +131,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 2);
+run_part1('example', false, 2);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 4);
+run_part2('example', false, 4);
 run_part2('input', false);
 echo "\n";
