@@ -49,9 +49,9 @@ function part2($col1, $col2)
     return $sim;
 }
 
-function main(string $filename, bool $verbose, bool $part2)
+function main(string $filename, bool $part2)
 {
-    $cols = parse($filename, $verbose, $part2);
+    $cols = parse($filename, vecho::$verbose, $part2);
 
     if ($part2) {
         $values = part2(...$cols);
@@ -59,7 +59,7 @@ function main(string $filename, bool $verbose, bool $part2)
         $values = part1(...$cols);
     }
 
-    if ($verbose) {
+    if (vecho::$verbose) {
         print_r(compact('values'));
     }
 
@@ -71,6 +71,6 @@ run_part1('input', false);
 echo "\n";
 
 // 31 (9 + 4 + 0 + 0 + 9 + 9).
-run_part2('example', true, 31);
+run_part2('example', false, 31);
 run_part2('input', false);
-//echo "\n";
+echo "\n";
