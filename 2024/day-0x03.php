@@ -14,104 +14,23 @@ require_once __DIR__ . '/common.php';
 
 function parse(string $filename, bool $part2)
 {
-    $lines = file($filename);
+    $body = file_get_contents($filename);
 
-    $reports = [];
-    foreach ($lines as $idx => $line) {
-        $reports[] = explode(' ', trim($line));
+    if (!preg_match_all('/mul\(([0-9]{1,3}),([0-9]{1,3})\)/', $body, $matches)) {
+        die('No valid instructions found');
     }
 
-    return $reports;
+    return array_map(null, $matches[1], $matches[2]);
 }
 
-function is_safe($values)
+function part1($values)
 {
-    $error_idx = find_error($values);
-
-    return $error_idx === null;
+    return array_map(fn($i) => $i[0] * $i[1], $values);
 }
 
-function find_error($values)
+function part2($values)
 {
-    if (count($values) < 2) {
-        die('need at least 2 values');
-    }
-
-    $decreasing = $values[0] > $values[1];
-    for ($i = 1; $i < count($values); $i++) {
-        $diff = $values[$i] - $values[$i - 1];
-        if ($decreasing) {
-            if ($diff >= 0) {
-                return $i;
-            }
-        } else {
-            if ($diff <= 0) {
-                return $i;
-            }
-        }
-
-        if (abs($diff) > 3) {
-            return $i;
-        }
-    }
-
-    return null;
-}
-
-function retry_without_idx($values, $remove_idx)
-{
-    array_splice($values, $remove_idx, 1);
-
-    return is_safe($values);
-}
-
-function is_safe_v2($values)
-{
-    if (is_safe($values)) {
-        return true;
-    }
-
-    vecho::msg("\nUNSAFE... ", $values);
-
-    // let's just brute force it.
-    foreach ($values as $idx => $unused) {
-        if (retry_without_idx($values, $idx)) {
-            vecho::msg('OK after removing index', $idx);
-            return true;
-        }
-    }
-
-    vecho::msg('UNSAFE');
-
-    return false;
-}
-
-function part1($reports)
-{
-    $safe = [];
-    foreach ($reports as $values) {
-        if (is_safe($values)) {
-            $safe[] = 1;
-        }
-    }
-
-    return $safe;
-}
-
-function part2($reports)
-{
-    $safe = [];
-    foreach ($reports as $idx => $values) {
-        if (is_safe_v2($values)) {
-            $safe[] = 1;
-        }
-
-        if ($idx > 10) {
-            vecho::$verbose = false;
-        }
-    }
-
-    return $safe;
+    return [23];
 }
 
 function main(string $filename, bool $part2)
@@ -131,10 +50,11 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', false, 2);
+// 161 (2*4 + 5*5 + 11*8 + 8*5).
+run_part1('example', true, 161);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 4);
-run_part2('input', false);
-echo "\n";
+// run_part2('example', false, 4);
+// run_part2('input', false);
+// echo "\n";
