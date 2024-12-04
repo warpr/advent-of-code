@@ -87,20 +87,6 @@ function find_xmas($grid, $xdelta, $ydelta)
     return array_sum($ret);
 }
 
-/*
-___0123456789
-0  ....XXMAS.   (5,0 e) (4,0 se)
-1  .SAMXMS...   (4,1 w)
-2  ...S..A...
-3  ..A.A.MS.X   (9,3 s) (9,3 sw)
-4  XMASAMX.MM   (0,4 e) (6,4 w) (6,4 n)
-5  X.....XA.A   (0,5 ne) (6,5 nw)
-6  S.S.S.S.SS
-7  .A.A.A.A.A
-8  ..M.M.M.MM
-9  .X.X.XMASX   (5,9 e) (9,9 n) (1,9 ne) (3,9 ne) (5,9 ne)
-*/
-
 function has_mas($grid, $at)
 {
     extract($at);
@@ -197,6 +183,6 @@ run_part1('example', false, 18);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 9);
+run_part2('example', false, 9);
 run_part2('input', false);
 echo "\n";
