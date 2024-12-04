@@ -44,8 +44,8 @@ function has_xmas($grid, $at)
 {
     extract($at);
 
-    $max_x = strlen($grid[0]);
-    $max_y = count($grid);
+    $max_x = strlen($grid[0]) - 1;
+    $max_y = count($grid) - 1;
 
     $xpos = $x;
     $ypos = $y;
@@ -87,6 +87,65 @@ function find_xmas($grid, $xdelta, $ydelta)
     return array_sum($ret);
 }
 
+/*
+___0123456789
+0  ....XXMAS.   (5,0 e) (4,0 se)
+1  .SAMXMS...   (4,1 w)
+2  ...S..A...
+3  ..A.A.MS.X   (9,3 s) (9,3 sw)
+4  XMASAMX.MM   (0,4 e) (6,4 w) (6,4 n)
+5  X.....XA.A   (0,5 ne) (6,5 nw)
+6  S.S.S.S.SS
+7  .A.A.A.A.A
+8  ..M.M.M.MM
+9  .X.X.XMASX   (5,9 e) (9,9 n) (1,9 ne) (3,9 ne) (5,9 ne)
+*/
+
+function has_mas($grid, $at)
+{
+    extract($at);
+
+    if ($grid[$y][$x] !== 'A') {
+        return 0;
+    }
+
+    $max_x = strlen($grid[0]) - 1;
+    $max_y = count($grid) - 1;
+
+    if ($x <= 0 || $x >= $max_x) {
+        return 0;
+    }
+
+    if ($y <= 0 || $y >= $max_y) {
+        return 0;
+    }
+
+    $sw = implode('', [$grid[$y - 1][$x - 1], $grid[$y][$x], $grid[$y + 1][$x + 1]]);
+
+    $se = implode('', [$grid[$y - 1][$x + 1], $grid[$y][$x], $grid[$y + 1][$x - 1]]);
+
+    if (($sw === 'MAS' || $sw === 'SAM') && ($se === 'MAS' || $se === 'SAM')) {
+        vecho::msg('Found one', $at, $sw, $se);
+        return 1;
+    }
+
+    return 0;
+}
+
+function find_mas($grid)
+{
+    $ret = [];
+
+    foreach ($grid as $y => $grid_line) {
+        $line = str_split($grid_line);
+        foreach ($line as $x => $chr) {
+            $ret[] = has_mas($grid, compact('x', 'y'));
+        }
+    }
+
+    return array_sum($ret);
+}
+
 function part1($grid)
 {
     $ret = [];
@@ -108,9 +167,13 @@ function part1($grid)
     return $ret;
 }
 
-function part2($values)
+function part2($grid)
 {
-    return [23];
+    $ret = [];
+
+    $ret[] = find_mas($grid);
+
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -130,10 +193,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 18);
+run_part1('example', false, 18);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example2', true, 48);
-// run_part2('input', false);
-// echo "\n";
+run_part2('example', true, 9);
+run_part2('input', false);
+echo "\n";
