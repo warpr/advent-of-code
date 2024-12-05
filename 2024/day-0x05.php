@@ -102,9 +102,64 @@ function part1($values)
     return $ret;
 }
 
+function fix_page_order($pages, $rule_set)
+{
+    extract($rule_set);
+
+    vecho::msg('Need to fix', $pages);
+
+    usort($pages, function ($a, $b) use ($before, $after) {
+        $a_must_precede = array_fill_keys($before[$a] ?? [], true);
+        $b_must_precede = array_fill_keys($before[$b] ?? [], true);
+        $a_must_follow = array_fill_keys($after[$a] ?? [], true);
+        $b_must_follow = array_fill_keys($after[$b] ?? [], true);
+
+        if (array_key_exists($b, $a_must_precede) || array_key_exists($a, $b_must_follow)) {
+            // a must precede b
+            // b must follow a
+            return -1;
+        }
+
+        if (array_key_exists($a, $b_must_precede) || array_key_exists($b, $a_must_follow)) {
+            // b must precede a
+            // a must follow b
+            return 1;
+        }
+
+        return 0;
+    });
+
+    vecho::msg('After sort', $pages);
+
+    return $pages;
+}
+
 function part2($values)
 {
-    return [23];
+    $rule_set = parse_rules($values['rules']);
+
+    $ret = [];
+
+    foreach ($values['print'] as $idx => $pages) {
+        vecho::msg("Verifying print {$idx}", $pages);
+        if (
+            verify_page_order($pages, $rule_set['before']) &&
+            verify_page_order(array_reverse($pages), $rule_set['after'])
+        ) {
+            // print is OK, ignore for part 2
+        } else {
+            $fixed = fix_page_order($pages, $rule_set);
+            $middle_page_idx = count($fixed) >> 1;
+            $middle_page = $fixed[$middle_page_idx];
+
+            vecho::msg("Print {$idx} is fixed, middle page is", $middle_page);
+            $ret[] = $middle_page;
+
+            vecho::$verbose = false;
+        }
+    }
+
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -127,8 +182,16 @@ function main(string $filename, bool $part2)
 run_part1('example', false, 143);
 run_part1('input', false);
 echo "\n";
+
 /*
-run_part2('example', false, 9);
+    75,97,47,61,53 becomes 97,75,47,61,53.
+    61,13,29 becomes 61,29,13.
+    97,13,75,29,47 becomes 97,75,47,29,13.
+
+After taking only the incorrectly-ordered updates and ordering
+them correctly, their middle page numbers are 47, 29, and 47.
+Adding these together produces 123.
+*/
+run_part2('example', false, 123);
 run_part2('input', false);
 echo "\n";
-*/
