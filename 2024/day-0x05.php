@@ -16,150 +16,95 @@ function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $grid = [];
+    $rules = [];
+    $print = [];
+
     foreach ($lines as $line) {
-        $line = trim($line);
+        if (str_contains($line, '|')) {
+            $rules[] = explode('|', trim($line));
+        }
 
-        $grid[] = $line;
+        if (str_contains($line, ',')) {
+            $print[] = explode(',', trim($line));
+        }
     }
 
-    return $grid;
+    return compact('rules', 'print');
 }
 
-/*
-___0123456789
-0  ....XXMAS.   (5,0 e) (4,0 se)
-1  .SAMXMS...   (4,1 w)
-2  ...S..A...
-3  ..A.A.MS.X   (9,3 s) (9,3 sw)
-4  XMASAMX.MM   (0,4 e) (6,4 w) (6,4 n)
-5  X.....XA.A   (0,5 ne) (6,5 nw)
-6  S.S.S.S.SS
-7  .A.A.A.A.A
-8  ..M.M.M.MM
-9  .X.X.XMASX   (5,9 e) (9,9 n) (1,9 ne) (3,9 ne) (5,9 ne)
-*/
-
-function has_xmas($grid, $at)
+function parse_rules($rules)
 {
-    extract($at);
+    $before = [];
+    $after = [];
 
-    $max_x = strlen($grid[0]) - 1;
-    $max_y = count($grid) - 1;
+    foreach ($rules as $pair) {
+        list($b, $a) = $pair;
 
-    $xpos = $x;
-    $ypos = $y;
-
-    foreach (str_split('XMAS') as $idx => $chr) {
-        if ($xpos < 0 || $xpos > $max_x) {
-            return 0;
-        }
-
-        if ($ypos < 0 || $ypos > $max_y) {
-            return 0;
-        }
-
-        $found = $grid[$ypos][$xpos] ?? null;
-        if ($found !== $chr) {
-            return 0;
-        }
-
-        $xpos += $xdelta;
-        $ypos += $ydelta;
+        @$before[$b][] = $a;
+        @$after[$a][] = $b;
     }
 
-    vecho::msg('Found XMAS', $at);
-
-    return 1;
+    return compact('before', 'after');
 }
 
-function find_xmas($grid, $xdelta, $ydelta)
+function verify_page_order($pages, $before)
 {
+    $seen = [];
+
+    $printing = array_fill_keys($pages, true);
+
+    foreach ($pages as $page) {
+        if (empty($before[$page])) {
+            // page doesn't have to come before any pages
+            continue;
+        }
+
+        $must_have_seen = [];
+        foreach ($before[$page] as $later_page) {
+            if (array_key_exists($later_page, $printing) && array_key_exists($later_page, $seen)) {
+                // $later_page will be printed, and must be printed after
+                // $page. However, it was printed already, that's an error.
+                vecho::msg("expected $later_page after $page");
+                return false;
+            }
+        }
+
+        $seen[$page] = true;
+    }
+
+    return true;
+}
+
+function part1($values)
+{
+    $rule_set = parse_rules($values['rules']);
+
+    vecho::msg('before', $rule_set['before']);
+
     $ret = [];
 
-    foreach ($grid as $y => $grid_line) {
-        $line = str_split($grid_line);
-        foreach ($line as $x => $chr) {
-            $ret[] = has_xmas($grid, compact('x', 'y', 'xdelta', 'ydelta'));
+    foreach ($values['print'] as $idx => $pages) {
+        vecho::msg("Verifying print {$idx}", $pages);
+        if (
+            verify_page_order($pages, $rule_set['before']) &&
+            verify_page_order(array_reverse($pages), $rule_set['after'])
+        ) {
+            $middle_page_idx = count($pages) >> 1;
+            $middle_page = $pages[$middle_page_idx];
+
+            vecho::msg("Print {$idx} is OK, middle page is", $middle_page);
+            $ret[] = $middle_page;
+
+            vecho::$verbose = false;
         }
     }
-
-    return array_sum($ret);
-}
-
-function has_mas($grid, $at)
-{
-    extract($at);
-
-    if ($grid[$y][$x] !== 'A') {
-        return 0;
-    }
-
-    $max_x = strlen($grid[0]) - 1;
-    $max_y = count($grid) - 1;
-
-    if ($x <= 0 || $x >= $max_x) {
-        return 0;
-    }
-
-    if ($y <= 0 || $y >= $max_y) {
-        return 0;
-    }
-
-    $sw = implode('', [$grid[$y - 1][$x - 1], $grid[$y][$x], $grid[$y + 1][$x + 1]]);
-
-    $se = implode('', [$grid[$y - 1][$x + 1], $grid[$y][$x], $grid[$y + 1][$x - 1]]);
-
-    if (($sw === 'MAS' || $sw === 'SAM') && ($se === 'MAS' || $se === 'SAM')) {
-        vecho::msg('Found one', $at, $sw, $se);
-        return 1;
-    }
-
-    return 0;
-}
-
-function find_mas($grid)
-{
-    $ret = [];
-
-    foreach ($grid as $y => $grid_line) {
-        $line = str_split($grid_line);
-        foreach ($line as $x => $chr) {
-            $ret[] = has_mas($grid, compact('x', 'y'));
-        }
-    }
-
-    return array_sum($ret);
-}
-
-function part1($grid)
-{
-    $ret = [];
-
-    // horizontal
-    $ret[] = find_xmas($grid, 1, 0);
-    $ret[] = find_xmas($grid, -1, 0);
-
-    // vertical
-    $ret[] = find_xmas($grid, 0, 1);
-    $ret[] = find_xmas($grid, 0, -1);
-
-    // diagnonal
-    $ret[] = find_xmas($grid, 1, 1);
-    $ret[] = find_xmas($grid, 1, -1);
-    $ret[] = find_xmas($grid, -1, 1);
-    $ret[] = find_xmas($grid, -1, -1);
 
     return $ret;
 }
 
-function part2($grid)
+function part2($values)
 {
-    $ret = [];
-
-    $ret[] = find_mas($grid);
-
-    return $ret;
+    return [23];
 }
 
 function main(string $filename, bool $part2)
@@ -179,10 +124,11 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', false, 18);
+run_part1('example', false, 143);
 run_part1('input', false);
 echo "\n";
-
+/*
 run_part2('example', false, 9);
 run_part2('input', false);
 echo "\n";
+*/
