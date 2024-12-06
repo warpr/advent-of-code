@@ -1,8 +1,23 @@
 <?php
+/**
+ *   Copyright (C) 2024  Kuno Woudt <kuno@frob.nl>
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of copyleft-next 0.3.1.  See copyleft-next-0.3.1.txt.
+ *
+ *   SPDX-License-Identifier: copyleft-next-0.3.1
+ */
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/grid.php';
 require_once __DIR__ . '/vecho.php';
+
+function clear_screen()
+{
+    echo chr(27) . '[2J';
+    echo chr(27) . '[H';
+}
 
 function memoize(callable $fn): callable
 {
