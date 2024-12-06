@@ -12,154 +12,137 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
+function clear_screen()
+{
+    echo chr(27) . '[2J';
+    echo chr(27) . '[H';
+}
+
+class pos
+{
+    function __construct(public readonly int $x, public readonly int $y)
+    {
+    }
+
+    function add(pos $pos)
+    {
+        return new pos($this->x + $pos->x, $this->y + $pos->y);
+    }
+}
+
+const N = new pos(0, -1);
+const NE = new pos(1, -1);
+const E = new pos(1, 0);
+const SE = new pos(1, 1);
+const S = new pos(0, 1);
+const SW = new pos(-1, 1);
+const W = new pos(-1, 0);
+const NW = new pos(-1, -1);
+
+class grid
+{
+    public array $grid;
+    public readonly int $size_x;
+    public readonly int $size_y;
+
+    function __construct($grid)
+    {
+        $size_x = 0;
+        foreach ($grid as $line) {
+            $len = strlen($line);
+            if ($len > $size_x) {
+                $size_x = $len;
+            }
+        }
+
+        $this->size_x = $size_x;
+        $this->size_y = count($grid);
+        $this->grid = $grid;
+    }
+
+    function get(pos $pos, $default = null)
+    {
+        if ($pos->x < 0 || $pos->x >= $this->size_x || $pos->y < 0 || $pos->y >= $this->size_y) {
+            return $default;
+        }
+
+        return $this->grid[$pos->y][$pos->x] ?? $default;
+    }
+
+    function set(pos $pos, $val = null)
+    {
+        if ($pos->x < 0 || $pos->x >= $this->size_x || $pos->y < 0 || $pos->y >= $this->size_y) {
+            vecho::msg('[WARNING] not writing out of bounds of the grid', compact('pos', 'val'));
+            return;
+        }
+
+        $this->grid[$pos->y][$pos->x] = $val;
+    }
+
+    function is_val($pos, $val)
+    {
+        return $this->get($pos->x, $pos->y) === $val;
+    }
+
+    function find_first($val)
+    {
+        foreach ($this->grid as $y => $line) {
+            foreach (str_split($line) as $x => $char) {
+                if ($char === $val) {
+                    return new pos($x, $y);
+                }
+            }
+        }
+    }
+
+    function count($val)
+    {
+        $ret = 0;
+
+        foreach ($this->grid as $y => $line) {
+            foreach (str_split($line) as $x => $char) {
+                if ($char === $val) {
+                    $ret++;
+                }
+            }
+        }
+
+        return $ret;
+    }
+
+    function look(pos $pos, pos $dir)
+    {
+        return $this->get($pos->add($dir));
+    }
+
+    function render()
+    {
+        if (!vecho::$verbose) {
+            return;
+        }
+
+        clear_screen();
+
+        foreach ($this->grid as $line) {
+            echo $line . "\n";
+        }
+
+        usleep(50 * 1000);
+    }
+}
+
 function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $rules = [];
-    $print = [];
-
+    $grid = [];
     foreach ($lines as $line) {
-        if (str_contains($line, '|')) {
-            $rules[] = explode('|', trim($line));
-        }
+        $line = trim($line);
 
-        if (str_contains($line, ',')) {
-            $print[] = explode(',', trim($line));
-        }
+        $grid[] = $line;
     }
 
-    return compact('rules', 'print');
-}
-
-function parse_rules($rules)
-{
-    $before = [];
-    $after = [];
-
-    foreach ($rules as $pair) {
-        list($b, $a) = $pair;
-
-        @$before[$b][] = $a;
-        @$after[$a][] = $b;
-    }
-
-    return compact('before', 'after');
-}
-
-function verify_page_order($pages, $before)
-{
-    $seen = [];
-
-    $printing = array_fill_keys($pages, true);
-
-    foreach ($pages as $page) {
-        if (empty($before[$page])) {
-            // page doesn't have to come before any pages
-            continue;
-        }
-
-        $must_have_seen = [];
-        foreach ($before[$page] as $later_page) {
-            if (array_key_exists($later_page, $printing) && array_key_exists($later_page, $seen)) {
-                // $later_page will be printed, and must be printed after
-                // $page. However, it was printed already, that's an error.
-                vecho::msg("expected $later_page after $page");
-                return false;
-            }
-        }
-
-        $seen[$page] = true;
-    }
-
-    return true;
-}
-
-function part1($values)
-{
-    $rule_set = parse_rules($values['rules']);
-
-    vecho::msg('before', $rule_set['before']);
-
-    $ret = [];
-
-    foreach ($values['print'] as $idx => $pages) {
-        vecho::msg("Verifying print {$idx}", $pages);
-        if (
-            verify_page_order($pages, $rule_set['before']) &&
-            verify_page_order(array_reverse($pages), $rule_set['after'])
-        ) {
-            $middle_page_idx = count($pages) >> 1;
-            $middle_page = $pages[$middle_page_idx];
-
-            vecho::msg("Print {$idx} is OK, middle page is", $middle_page);
-            $ret[] = $middle_page;
-
-            vecho::$verbose = false;
-        }
-    }
-
-    return $ret;
-}
-
-function fix_page_order($pages, $rule_set)
-{
-    extract($rule_set);
-
-    vecho::msg('Need to fix', $pages);
-
-    usort($pages, function ($a, $b) use ($before, $after) {
-        $a_must_precede = array_fill_keys($before[$a] ?? [], true);
-        $b_must_precede = array_fill_keys($before[$b] ?? [], true);
-        $a_must_follow = array_fill_keys($after[$a] ?? [], true);
-        $b_must_follow = array_fill_keys($after[$b] ?? [], true);
-
-        if (array_key_exists($b, $a_must_precede) || array_key_exists($a, $b_must_follow)) {
-            // a must precede b
-            // b must follow a
-            return -1;
-        }
-
-        if (array_key_exists($a, $b_must_precede) || array_key_exists($b, $a_must_follow)) {
-            // b must precede a
-            // a must follow b
-            return 1;
-        }
-
-        return 0;
-    });
-
-    vecho::msg('After sort', $pages);
-
-    return $pages;
-}
-
-function part2($values)
-{
-    $rule_set = parse_rules($values['rules']);
-
-    $ret = [];
-
-    foreach ($values['print'] as $idx => $pages) {
-        vecho::msg("Verifying print {$idx}", $pages);
-        if (
-            verify_page_order($pages, $rule_set['before']) &&
-            verify_page_order(array_reverse($pages), $rule_set['after'])
-        ) {
-            // print is OK, ignore for part 2
-        } else {
-            $fixed = fix_page_order($pages, $rule_set);
-            $middle_page_idx = count($fixed) >> 1;
-            $middle_page = $fixed[$middle_page_idx];
-
-            vecho::msg("Print {$idx} is fixed, middle page is", $middle_page);
-            $ret[] = $middle_page;
-
-            vecho::$verbose = false;
-        }
-    }
-
-    return $ret;
+    return new grid($grid);
 }
 
 function main(string $filename, bool $part2)
@@ -172,26 +155,67 @@ function main(string $filename, bool $part2)
         $values = part1($parsed);
     }
 
-    if (vecho::$verbose) {
-        print_r(compact('values'));
-    }
-
     return array_sum($values);
 }
 
-run_part1('example', false, 143);
+function turn_right(pos $dir)
+{
+    switch ($dir) {
+        case N:
+            return E;
+        case E:
+            return S;
+        case S:
+            return W;
+        default:
+            return N;
+    }
+}
+
+function guard_move(grid $grid, pos $pos, pos $dir)
+{
+    if ($grid->look($pos, $dir) === null) {
+        throw new \Exception('out of bounds');
+    }
+
+    if ($grid->look($pos, $dir) === '#') {
+        $dir = turn_right($dir);
+    }
+
+    return [$pos->add($dir), $dir];
+}
+
+function part1($grid)
+{
+    $pos = $grid->find_first('^');
+    $dir = N;
+
+    vecho::msg('start', compact('pos', 'dir'));
+
+    try {
+        while (true) {
+            $grid->set($pos, 'X');
+            list($pos, $dir) = guard_move($grid, $pos, $dir);
+
+            $grid->render();
+        }
+    } catch (\Exception $e) {
+        vecho::msg("\nGuard out of bounds at", compact('pos', 'dir'));
+        vecho::msg('');
+    }
+
+    return [$grid->count('X')];
+}
+
+function part2($grid)
+{
+    return [23];
+}
+
+run_part1('example', true, 41);
 run_part1('input', false);
 echo "\n";
 
-/*
-    75,97,47,61,53 becomes 97,75,47,61,53.
-    61,13,29 becomes 61,29,13.
-    97,13,75,29,47 becomes 97,75,47,29,13.
-
-After taking only the incorrectly-ordered updates and ordering
-them correctly, their middle page numbers are 47, 29, and 47.
-Adding these together produces 123.
-*/
-run_part2('example', false, 123);
-run_part2('input', false);
+// run_part2('example', false, 123);
+// run_part2('input', false);
 echo "\n";
