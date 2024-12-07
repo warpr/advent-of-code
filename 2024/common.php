@@ -19,6 +19,11 @@ function clear_screen()
     echo chr(27) . '[H';
 }
 
+function flatten(array $array)
+{
+    return array_merge(...$array);
+}
+
 function memoize(callable $fn): callable
 {
     return function (...$args) use ($fn) {

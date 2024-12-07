@@ -16,14 +16,20 @@ function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $grid = [];
+    $ret = [];
+
     foreach ($lines as $line) {
         $line = trim($line);
 
-        $grid[] = $line;
+        list($answer, $inputs) = explode(': ', $line);
+
+        $ret[] = [
+            'answer' => $answer,
+            'inputs' => explode(' ', $inputs),
+        ];
     }
 
-    return new grid($grid);
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -39,9 +45,74 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-function part1($grid)
+function permutations($slots, $options)
 {
-    return [23];
+    $prefixes = [[]];
+
+    for ($i = 0; $i < $slots; $i++) {
+        $new_prefixes = [];
+        foreach ($prefixes as $idx => $prefix) {
+            foreach ($options as $opt) {
+                $new_prefixes[] = array_merge($prefix, [$opt]);
+            }
+        }
+        $prefixes = $new_prefixes;
+    }
+
+    return $prefixes;
+}
+
+function do_math(array $eq)
+{
+    $acc = array_shift($eq);
+    $op = null;
+
+    foreach ($eq as $token) {
+        if (!is_numeric($token)) {
+            $op = $token;
+            continue;
+        }
+
+        switch ($op) {
+            case '*':
+                $acc = $acc * $token;
+                break;
+            case '+':
+                $acc = $acc + $token;
+                break;
+        }
+    }
+
+    return $acc;
+}
+
+function part1($lines)
+{
+    $ret = [];
+
+    foreach ($lines as $stuff) {
+        extract($stuff);
+
+        $operator_count = count($inputs) - 1;
+        vecho::msg("For answer {$answer} we need {$operator_count} operators, inputs are", $inputs);
+
+        foreach (permutations($operator_count, ['*', '+']) as $p) {
+            $p[] = null;
+            $zipped = flatten(array_map(null, $inputs, $p));
+            array_pop($zipped);
+            vecho::msg(' - ', implode(' ', $zipped));
+
+            if (do_math($zipped) != $answer) {
+                continue;
+            }
+
+            vecho::msg('Found a correct set of operators', implode(' ', $zipped), ' = ', $answer);
+            $ret[$answer] = implode(' ', $zipped);
+            break;
+        }
+    }
+
+    return array_keys($ret);
 }
 
 function part2($grid)
