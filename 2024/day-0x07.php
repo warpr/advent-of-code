@@ -80,6 +80,8 @@ function do_math(array $eq)
             case '+':
                 $acc = $acc + $token;
                 break;
+            case '||':
+                $acc = (int) "{$acc}{$token}";
         }
     }
 
@@ -115,15 +117,41 @@ function part1($lines)
     return array_keys($ret);
 }
 
-function part2($grid)
+function part2($lines)
 {
-    return [23];
+    $ret = [];
+
+    foreach ($lines as $lineno => $stuff) {
+        extract($stuff);
+
+        $operator_count = count($inputs) - 1;
+        vecho::msg(
+            "{$lineno}: For answer {$answer} we need {$operator_count} operators, inputs are",
+            $inputs
+        );
+
+        foreach (permutations($operator_count, ['*', '+', '||']) as $p) {
+            $p[] = null;
+            $zipped = flatten(array_map(null, $inputs, $p));
+            array_pop($zipped);
+
+            if (do_math($zipped) != $answer) {
+                continue;
+            }
+
+            vecho::msg('Found a correct set of operators', implode(' ', $zipped), ' = ', $answer);
+            $ret[$answer] = implode(' ', $zipped);
+            break;
+        }
+    }
+
+    return array_keys($ret);
 }
 
 run_part1('example', false, 3749);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 6);
-// run_part2('input', false);
+run_part2('example', false, 11387);
+run_part2('input', false);
 echo "\n";
