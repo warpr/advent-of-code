@@ -24,7 +24,7 @@ class pos implements JsonSerializable
         return new pos($this->x + $pos->x, $this->y + $pos->y);
     }
 
-    function __toString()
+    function __toString(): string
     {
         if (empty($this->name)) {
             return '(' . $this->x . ', ' . $this->y . ')';
@@ -33,7 +33,7 @@ class pos implements JsonSerializable
         }
     }
 
-    function jsonSerialize()
+    function jsonSerialize(): string
     {
         return (string) $this;
     }
@@ -185,7 +185,7 @@ class grid
         return $this->get($pos->add($dir));
     }
 
-    function render()
+    function render(int $sleep = 25000)
     {
         if (!vecho::$verbose) {
             return;
@@ -197,6 +197,6 @@ class grid
             echo $line . "\n";
         }
 
-        usleep(25 * 1000);
+        usleep($sleep);
     }
 }

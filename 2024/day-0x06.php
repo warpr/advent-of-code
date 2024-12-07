@@ -46,13 +46,18 @@ function guard_move(grid $grid, pos $pos, pos $dir)
     }
 
     if ($grid->look($pos, $dir) === '#') {
-        $dir = turn_right($dir);
+        return [true, $pos, turn_right($dir)];
     }
 
     return [true, $pos->add($dir), $dir];
 }
 
 function find_loops($grid)
+{
+    return [23];
+}
+
+function find_loops_old($grid)
 {
     $ret = [];
 
@@ -164,71 +169,77 @@ function part1($grid)
     return [$grid->count('X')];
 }
 
-function part2($grid)
+function simulate_guard($grid)
 {
     $pos = $grid->find_first('^');
     $dir = N;
 
-    vecho::msg('start', compact('pos', 'dir'));
-
     $keep_going = true;
+    $seen = [];
 
     while ($keep_going) {
-        $draw = $dir == N || $dir == S ? '|' : '-';
-        $old_dir = $dir;
-        $old_pos = $pos;
+        $grid->set($pos, 'o');
+        $key = "{$pos}/{$dir}";
 
-        $prev_val = $grid->get($pos);
-        // don't overwrite our loop corners
-        if (!is_numeric($prev_val)) {
-            $grid->set($pos, $draw);
-        }
-        list($keep_going, $pos, $dir) = guard_move($grid, $pos, $dir);
+        if (empty($seen[$key])) {
+            $seen[$key] = 1;
+        } else {
+            $seen[$key]++;
 
-        if ($old_dir != $dir) {
-            if (is_numeric($prev_val)) {
-                // presumably this doesn't happen
-                $grid->set($old_pos, '8');
-            } else {
-                // changed direction, mark possible loop corner with
-                // css border index
-                switch ($old_dir) {
-                    case N:
-                        $grid->set($old_pos, '0');
-                        break;
-                    case E:
-                        $grid->set($old_pos, '1');
-                        break;
-                    case S:
-                        $grid->set($old_pos, '2');
-                        break;
-                    case W:
-                        $grid->set($old_pos, '3');
-                        break;
-                }
+            if ($seen[$key] > 2) {
+                vecho::msg("I think we're looping?", compact('key'));
+                return false;
             }
         }
 
-        $grid->render();
+        list($keep_going, $pos, $dir) = guard_move($grid, $pos, $dir);
+
+        $grid->render(1000);
     }
 
-    vecho::msg("\nGuard out of bounds at", compact('pos', 'dir'));
-    vecho::msg('');
+    return true;
+}
 
-    $loops = find_loops($grid);
-    // $grid->render();
+function part2($grid)
+{
+    $ret = [];
 
-    /*
-       expected obstacles at
-       (3, 6) found
-       (6, 7) found
-       (7, 7) found
-       (1, 8) found
-       (3, 8)
-       (7, 9) found
-    */
+    $verbose = vecho::$verbose;
 
-    return [count($loops)];
+    $escape_path = clone $grid;
+    vecho::$verbose = false;
+    simulate_guard($escape_path);
+    vecho::$verbose = $verbose;
+
+    $escape_path->render();
+
+    foreach ($grid->grid as $y => $line) {
+        foreach (str_split($line) as $x => $val) {
+            if ($val !== '.') {
+                continue;
+            }
+
+            $obstacle_pos = new pos($x, $y);
+            if ($escape_path->get($obstacle_pos) !== 'o') {
+                // guard doesn't come here
+                continue;
+            }
+
+            $copy = clone $grid;
+            $copy->set($obstacle_pos, '#');
+
+            vecho::$verbose = false;
+            $escaped = simulate_guard($copy);
+            vecho::$verbose = $verbose;
+
+            if (!$escaped) {
+                vecho::msg('possible loop at', compact('obstacle_pos'));
+                $ret[] = $obstacle_pos;
+            }
+        }
+    }
+
+    return [count($ret)];
 }
 
 run_part1('example', false, 41);
@@ -236,5 +247,5 @@ run_part1('input', false);
 echo "\n";
 
 run_part2('example', true, 6);
-// run_part2('input', false);
+run_part2('input', true);
 echo "\n";
