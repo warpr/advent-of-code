@@ -80,13 +80,48 @@ function part1($grid)
 
 function part2($grid)
 {
-    return [23];
+    $antinodes = clone $grid;
+
+    // get a list of antennas and their locations
+    $antennas = [];
+    foreach ($grid->walk() as $loc) {
+        if ($loc->val !== '.') {
+            @$antennas[$loc->val][] = $loc->pos;
+        }
+    }
+
+    foreach ($antennas as $type => $positions) {
+        foreach (all_pairs($positions) as $pair) {
+            list($a, $b) = $pair;
+            $delta_a = new pos($a->x - $b->x, $a->y - $b->y);
+            $delta_b = new pos($b->x - $a->x, $b->y - $a->y);
+
+            $antinodes->set($a, '#');
+            $antinodes->set($b, '#');
+
+            $antinode_a = $a->add($delta_a);
+            while ($antinodes->set($antinode_a, '#')) {
+                $antinode_a = $antinode_a->add($delta_a);
+            }
+
+            $antinode_b = $b->add($delta_b);
+            while ($antinodes->set($antinode_b, '#')) {
+                $antinode_b = $antinode_b->add($delta_b);
+            }
+
+            $antinodes->render();
+        }
+    }
+
+    $all = iterator_to_array($antinodes->find_all('#'));
+
+    return [count($all)];
 }
 
-run_part1('example', true, 14);
+run_part1('example', false, 14);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 11387);
-// run_part2('input', false);
+run_part2('example', true, 34);
+run_part2('input', false);
 echo "\n";

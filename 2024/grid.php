@@ -111,10 +111,11 @@ class grid
     {
         if ($pos->x < 0 || $pos->x >= $this->size_x || $pos->y < 0 || $pos->y >= $this->size_y) {
             vecho::msg('[WARNING] not writing out of bounds of the grid', compact('pos', 'val'));
-            return;
+            return false;
         }
 
         $this->grid[$pos->y][$pos->x] = $val;
+        return true;
     }
 
     function is_val($pos, $val)
