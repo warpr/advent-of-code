@@ -122,6 +122,23 @@ class grid
         return $this->get($pos->x, $pos->y) === $val;
     }
 
+    function walk($fn = null)
+    {
+        foreach ($this->grid as $y => $line) {
+            foreach (str_split($line) as $x => $val) {
+                $pos = new pos($x, $y);
+                if (empty($fn)) {
+                    yield (object) compact('pos', 'val');
+                } else {
+                    $something = $fn($pos, $val);
+                    if ($something !== null) {
+                        yield $something;
+                    }
+                }
+            }
+        }
+    }
+
     function find_first($val)
     {
         foreach ($this->grid as $y => $line) {
@@ -156,13 +173,7 @@ class grid
 
     function find_all($val)
     {
-        foreach ($this->grid as $y => $line) {
-            foreach (str_split($line) as $x => $char) {
-                if ($char === $val) {
-                    yield new pos($x, $y);
-                }
-            }
-        }
+        return $this->walk(fn($pos, $char) => $char === $val ? $pos : null);
     }
 
     function count($val)
