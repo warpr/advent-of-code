@@ -96,15 +96,12 @@ function part2($grid)
             $delta_a = new pos($a->x - $b->x, $a->y - $b->y);
             $delta_b = new pos($b->x - $a->x, $b->y - $a->y);
 
-            $antinodes->set($a, '#');
-            $antinodes->set($b, '#');
-
-            $antinode_a = $a->add($delta_a);
+            $antinode_a = $a;
             while ($antinodes->set($antinode_a, '#')) {
                 $antinode_a = $antinode_a->add($delta_a);
             }
 
-            $antinode_b = $b->add($delta_b);
+            $antinode_b = $b;
             while ($antinodes->set($antinode_b, '#')) {
                 $antinode_b = $antinode_b->add($delta_b);
             }
@@ -122,6 +119,6 @@ run_part1('example', false, 14);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 34);
+run_part2('example', false, 34);
 run_part2('input', false);
 echo "\n";
