@@ -18,6 +18,36 @@ class disk
     {
     }
 
+    function merge_free_space()
+    {
+        $prev_block = null;
+        foreach ($this->frag as $idx => $block) {
+            if ($block['len'] == 0) {
+                array_splice($this->frag, $idx, 1, []);
+                return true;
+            }
+
+            if ($prev_block) {
+                if ($prev_block['id'] === null && $block['id'] === null) {
+                    $backup = $block;
+                    $block['len'] += $prev_block['len'];
+                    array_splice($this->frag, $idx - 1, 2, [$block]);
+                    return true;
+                }
+            }
+
+            $prev_block = $block;
+        }
+
+        $last_block = end($this->frag);
+        if ($last_block && $last_block['id'] === null) {
+            array_pop($this->frag);
+            return true;
+        }
+
+        return false;
+    }
+
     function find_free_space()
     {
         foreach ($this->frag as $block) {
@@ -68,16 +98,92 @@ class disk
         return true;
     }
 
+    function find_empty_block_index(int $size)
+    {
+        foreach ($this->frag as $idx => $block) {
+            if ($block['id'] === null && $block['len'] >= $size) {
+                return $idx;
+            }
+        }
+
+        return null;
+    }
+
+    function find_file_index(int $file_id)
+    {
+        for ($i = count($this->frag) - 1; $i >= 0; $i--) {
+            if ($this->frag[$i]['id'] == $file_id) {
+                return $i;
+            }
+        }
+
+        return null;
+    }
+
+    function whole_file()
+    {
+        $all_file_ids = array_filter(array_column($this->frag, 'id'));
+
+        $all_file_ids = array_reverse($all_file_ids);
+        foreach ($all_file_ids as $file_id) {
+            while ($this->merge_free_space()) {
+            }
+
+            if (!$this->find_free_space() || empty($this->frag)) {
+                return;
+            }
+
+            $this->render();
+
+            $file_idx = $this->find_file_index($file_id);
+            $file_block = $this->frag[$file_idx] ?? null;
+            if (empty($file_block)) {
+                continue; // file already moved to done
+            }
+
+            $empty_idx = $this->find_empty_block_index($file_block['len']);
+            if ($empty_idx === null) {
+                // no free space fits this block
+                continue;
+            }
+            $empty_block = $this->frag[$empty_idx];
+
+            if ($empty_idx > $file_idx) {
+                // we'd be making it worse, skip
+                continue;
+            }
+
+            if ($file_block['len'] === $empty_block['len']) {
+                $this->frag[$empty_idx] = $file_block;
+                $this->frag[$file_idx] = $empty_block;
+            } elseif ($file_block['len'] > $empty_block['len']) {
+                $empty_block['id'] = $file_block['id'];
+                $file_block['len'] -= $empty_block['len'];
+                $this->frag[$empty_idx] = $empty_block;
+                $this->frag[$file_idx] = $file_block;
+            } else {
+                $this->frag[$file_idx] = ['id' => null, 'len' => $file_block['len']];
+                $empty_block['len'] -= $file_block['len'];
+                array_splice($this->frag, $empty_idx, 1, [$file_block, $empty_block]);
+            }
+        }
+    }
+
     function checksum()
     {
         $ret = [];
 
         $pos = 0;
-        foreach ($this->done as $block) {
-            for ($i = 0; $i < $block['len']; $i++) {
-                $ret[] = $pos++ * $block['id'];
+        foreach ([$this->done, $this->frag] as $blocks) {
+            foreach ($blocks as $block) {
+                for ($i = 0; $i < $block['len']; $i++) {
+                    $id = $block['id'] === null ? 0 : $block['id'];
+                    $ret[] = $pos++ * $id;
+                }
             }
         }
+
+        vecho::msg('checksum', $ret);
 
         return $ret;
     }
@@ -92,9 +198,31 @@ class disk
             clear_screen();
         }
 
-        vecho::msg('DONE ', $this->done);
-        vecho::msg('FRAG ', $this->frag);
-        vecho::msg("\n");
+        echo 'DONE';
+        foreach ($this->done as $block) {
+            if ($block['id'] === null) {
+                echo ' ' . str_pad('.', (int) $block['len'], '.');
+            } else {
+                echo ' ' . str_pad((string) $block['id'], (int) $block['len'], '_', STR_PAD_LEFT);
+            }
+        }
+        echo "\n";
+
+        echo 'FRAG';
+        foreach ($this->frag as $block) {
+            if ($block['len'] == 0) {
+                echo ' ~';
+                continue;
+            }
+
+            if ($block['id'] === null) {
+                echo ' ' . str_pad('.', (int) $block['len'], '.');
+            } else {
+                echo ' ' . str_pad((string) $block['id'], (int) $block['len'], '_', STR_PAD_LEFT);
+            }
+        }
+        echo "\n";
+        echo "\n";
 
         usleep($sleep * 1000);
     }
@@ -134,15 +262,6 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-function find_free_space(&$expanded)
-{
-}
-
-function defrag($expanded)
-{
-    $last_file = array_pop($expanded['frag']);
-}
-
 function reconstruct($disk_map)
 {
     $len = count($disk_map);
@@ -152,11 +271,11 @@ function reconstruct($disk_map)
 
     $i = 0;
     while (array_key_exists($i, $disk_map)) {
-        $ret[] = ['id' => $file_id++, 'len' => $disk_map[$i++]];
+        $ret[] = ['id' => $file_id++, 'len' => (int) $disk_map[$i++]];
 
         $free_length = $disk_map[$i++] ?? null;
         if ($free_length !== null) {
-            $ret[] = ['id' => null, 'len' => $free_length];
+            $ret[] = ['id' => null, 'len' => (int) $free_length];
         }
     }
 
@@ -165,13 +284,7 @@ function reconstruct($disk_map)
 
 function part1($disk_map)
 {
-    vecho::msg($disk_map);
-
     $disk = reconstruct($disk_map);
-
-    $disk->render(clear: false);
-    $disk->find_free_space();
-    $disk->render(clear: false);
 
     while ($disk->refrag()) {
         $disk->render();
@@ -182,13 +295,18 @@ function part1($disk_map)
 
 function part2($disk_map)
 {
-    return [23];
+    $disk = reconstruct($disk_map);
+
+    $disk->render(clear: false);
+    $disk->whole_file();
+
+    return $disk->checksum();
 }
 
-run_part1('example', true, 1928);
+run_part1('example', false, 1928);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 34);
-// run_part2('input', false);
+run_part2('example', false, 2858);
+run_part2('input', false);
 echo "\n";
