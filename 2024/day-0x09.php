@@ -12,18 +12,113 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
+class disk
+{
+    function __construct(public array $frag, public array $done = [])
+    {
+    }
+
+    function find_free_space()
+    {
+        foreach ($this->frag as $block) {
+            if ($block['id'] === null) {
+                return true;
+            }
+
+            // move all blocks before the first free space to "done"
+            $this->done[] = array_shift($this->frag);
+        }
+
+        // no more free space left.
+        return false;
+    }
+
+    function refrag()
+    {
+        if (!$this->find_free_space() || empty($this->frag)) {
+            return false;
+        }
+
+        $last_file = array_pop($this->frag);
+        if (empty($last_file['id'])) {
+            // found some free space at the end of the disk,
+            // not a real file.
+            return true;
+        }
+
+        $free_space = array_shift($this->frag);
+
+        if ($last_file['len'] == $free_space['len']) {
+            $this->done[] = $last_file;
+            return true;
+        }
+
+        if ($last_file['len'] > $free_space['len']) {
+            // split up the file
+            $free_space['id'] = $last_file['id'];
+            $this->done[] = $free_space;
+            $last_file['len'] -= $free_space['len'];
+            $this->frag[] = $last_file;
+            return true;
+        }
+
+        $this->done[] = $last_file;
+        $free_space['len'] -= $last_file['len'];
+        array_unshift($this->frag, $free_space);
+        return true;
+    }
+
+    function checksum()
+    {
+        $ret = [];
+
+        $pos = 0;
+        foreach ($this->done as $block) {
+            for ($i = 0; $i < $block['len']; $i++) {
+                $ret[] = $pos++ * $block['id'];
+            }
+        }
+
+        return $ret;
+    }
+
+    function render(int $sleep = 100, bool $clear = true)
+    {
+        if (!vecho::$verbose) {
+            return;
+        }
+
+        if ($clear) {
+            clear_screen();
+        }
+
+        vecho::msg('DONE ', $this->done);
+        vecho::msg('FRAG ', $this->frag);
+        vecho::msg("\n");
+
+        usleep($sleep * 1000);
+    }
+}
+
 function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $grid = [];
+    $output = [];
+
     foreach ($lines as $line) {
         $line = trim($line);
 
-        $grid[] = $line;
+        if (!empty($line)) {
+            $output[] = str_split($line);
+        }
     }
 
-    return new grid($grid);
+    if (count($output) > 1) {
+        die('unexpected multi-line input');
+    }
+
+    return array_pop($output);
 }
 
 function main(string $filename, bool $part2)
@@ -39,86 +134,61 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-function all_pairs($list)
+function find_free_space(&$expanded)
 {
-    $max = count($list);
-
-    foreach ($list as $idx => $a) {
-        for ($i = $idx + 1; $i < $max; $i++) {
-            yield [$a, $list[$i]];
-        }
-    }
 }
 
-function part1($grid)
+function defrag($expanded)
 {
-    $antinodes = clone $grid;
-
-    // get a list of antennas and their locations
-    $antennas = [];
-    foreach ($grid->walk() as $loc) {
-        if ($loc->val !== '.') {
-            @$antennas[$loc->val][] = $loc->pos;
-        }
-    }
-
-    foreach ($antennas as $type => $positions) {
-        foreach (all_pairs($positions) as $pair) {
-            list($a, $b) = $pair;
-            $delta_a = new pos($a->x - $b->x, $a->y - $b->y);
-            $delta_b = new pos($b->x - $a->x, $b->y - $a->y);
-            $antinodes->set($a->add($delta_a), '#');
-            $antinodes->set($b->add($delta_b), '#');
-            $antinodes->render();
-        }
-    }
-
-    $all = iterator_to_array($antinodes->find_all('#'));
-
-    return [count($all)];
+    $last_file = array_pop($expanded['frag']);
 }
 
-function part2($grid)
+function reconstruct($disk_map)
 {
-    $antinodes = clone $grid;
+    $len = count($disk_map);
 
-    // get a list of antennas and their locations
-    $antennas = [];
-    foreach ($grid->walk() as $loc) {
-        if ($loc->val !== '.') {
-            @$antennas[$loc->val][] = $loc->pos;
+    $ret = [];
+    $file_id = 0;
+
+    $i = 0;
+    while (array_key_exists($i, $disk_map)) {
+        $ret[] = ['id' => $file_id++, 'len' => $disk_map[$i++]];
+
+        $free_length = $disk_map[$i++] ?? null;
+        if ($free_length !== null) {
+            $ret[] = ['id' => null, 'len' => $free_length];
         }
     }
 
-    foreach ($antennas as $type => $positions) {
-        foreach (all_pairs($positions) as $pair) {
-            list($a, $b) = $pair;
-            $delta_a = new pos($a->x - $b->x, $a->y - $b->y);
-            $delta_b = new pos($b->x - $a->x, $b->y - $a->y);
-
-            $antinode_a = $a;
-            while ($antinodes->set($antinode_a, '#')) {
-                $antinode_a = $antinode_a->add($delta_a);
-            }
-
-            $antinode_b = $b;
-            while ($antinodes->set($antinode_b, '#')) {
-                $antinode_b = $antinode_b->add($delta_b);
-            }
-
-            $antinodes->render();
-        }
-    }
-
-    $all = iterator_to_array($antinodes->find_all('#'));
-
-    return [count($all)];
+    return new disk($ret);
 }
 
-run_part1('example', false, 14);
+function part1($disk_map)
+{
+    vecho::msg($disk_map);
+
+    $disk = reconstruct($disk_map);
+
+    $disk->render(clear: false);
+    $disk->find_free_space();
+    $disk->render(clear: false);
+
+    while ($disk->refrag()) {
+        $disk->render();
+    }
+
+    return $disk->checksum();
+}
+
+function part2($disk_map)
+{
+    return [23];
+}
+
+run_part1('example', true, 1928);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 34);
-run_part2('input', false);
+// run_part2('example', false, 34);
+// run_part2('input', false);
 echo "\n";
