@@ -197,7 +197,7 @@ class grid
         return $this->get($pos->add($dir));
     }
 
-    function render(int $sleep = 25000)
+    function render(int $sleep = 25)
     {
         if (!vecho::$verbose) {
             return;
@@ -209,6 +209,6 @@ class grid
             echo $line . "\n";
         }
 
-        usleep($sleep);
+        usleep($sleep * 1000);
     }
 }
