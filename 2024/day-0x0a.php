@@ -26,7 +26,7 @@ function parse(string $filename, bool $part2)
     return new grid($grid);
 }
 
-function follow_the_path(grid $grid, pos $start)
+function follow_the_path(grid $vis, grid $grid, pos $start)
 {
     $height = (int) $grid->get($start);
 
@@ -41,13 +41,14 @@ function follow_the_path(grid $grid, pos $start)
         }
     }
 
-    //    $grid->set($start, '.');
+    $vis->set($start, '.');
 
     return $ret;
 }
 
-function walk_the_trail(grid $grid, pos $start)
+function walk_the_trail(grid $grid, pos $start, bool $part2 = false)
 {
+    $visualize = clone $grid;
     $next = [$start];
     $ret = [];
 
@@ -56,14 +57,18 @@ function walk_the_trail(grid $grid, pos $start)
         $next = [];
         foreach ($current as $pos) {
             if ($grid->get($pos) == '9') {
-                $ret[(string) $pos] = $pos;
+                if ($part2) {
+                    $ret[] = $pos;
+                } else {
+                    $ret[(string) $pos] = $pos;
+                }
             }
 
-            foreach (follow_the_path($grid, $pos) as $step) {
+            foreach (follow_the_path($visualize, $grid, $pos) as $step) {
                 $next[] = $step;
             }
 
-            $grid->render(1);
+            $visualize->render(10);
         }
     }
 
@@ -88,7 +93,18 @@ function part1($grid)
 
 function part2($grid)
 {
-    return [23];
+    $grid->render();
+
+    $trailheads = $grid->find_all('0');
+
+    $end_counts = [];
+
+    foreach ($trailheads as $start) {
+        $trail_ends = walk_the_trail(clone $grid, $start, part2: true);
+        $end_counts[] = count($trail_ends);
+    }
+
+    return $end_counts;
 }
 
 function main(string $filename, bool $part2)
@@ -108,16 +124,21 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('challenge', true, 464);
 run_part1('example1', false, 1);
 run_part1('example2', false, 2);
 run_part1('example3', false, 4);
 run_part1('example4', false, 3);
-run_part1('example', true, 36);
+run_part1('example', false, 36);
+run_part1('challenge', false, 464);
 run_part1('input', false);
 echo "\n";
 
+run_part2('example5', false, 3);
+run_part2('example6', false, 13);
+run_part2('example7', false, 227);
+run_part2('example', false, 81);
+
+// https://www.reddit.com/r/adventofcode/comments/1hawlbo/2024_day_10_challenge_input/
 run_part2('challenge', false, 16451);
-// run_part2('example', false, 2858);
-// run_part2('input', false);
+run_part2('input', false);
 echo "\n";
