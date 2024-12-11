@@ -21,103 +21,65 @@ function parse(string $filename, bool $part2)
     return $stones;
 }
 
-function blink($before)
+$blink = memoize(blink(...));
+
+function blink_one_number(int $stone): array
 {
-    $after = [];
+    $stone_str = "{$stone}";
+    $odd_number_of_digits = strlen($stone_str) % 2;
 
-    foreach ($before as $stone) {
-        $stone_str = "{$stone}";
-        $odd_number_of_digits = strlen($stone_str) % 2;
-
-        if ($stone == 0) {
-            $after[] = 1;
-        } elseif (!$odd_number_of_digits) {
-            $two_stones = str_split($stone_str, strlen($stone_str) >> 1);
-            $after[] = (int) $two_stones[0];
-            $after[] = (int) $two_stones[1];
-        } else {
-            $after[] = $stone * 2024;
-        }
+    if ($stone == 0) {
+        return [1];
+    } elseif (!$odd_number_of_digits) {
+        $two_stones = str_split($stone_str, strlen($stone_str) >> 1);
+        return [(int) $two_stones[0], (int) $two_stones[1]];
+    } else {
+        return [$stone * 2024];
     }
-
-    return $after;
 }
 
-function partial_blink($state, $max_blink)
+function blink(int $blink_left, int $stone)
 {
-    $first = array_shift($state);
-    if ($first->blink == $max_blink) {
-        return [1, $state];
+    global $blink;
+
+    if ($blink_left <= 0) {
+        return 1;
     }
 
-    $new_stones = [];
-    foreach (blink([$first->val]) as $stone) {
-        $new_stones[] = (object) [
-            'val' => $stone,
-            'blink' => $first->blink + 1,
-            'idx' => $first->idx,
-        ];
+    $numbers = blink_one_number($stone);
+
+    $ret = [];
+    foreach ($numbers as $num) {
+        $ret[] = $blink($blink_left - 1, $num);
     }
 
-    return [0, array_merge($new_stones, $state)];
+    return array_sum($ret);
 }
 
 function part1($stones)
 {
-    $test = blink(explode(' ', '0 1 10 99 999'));
-    $actual = implode(' ', $test);
-    $expected = '1 2024 1 0 9 9 2021976';
-    if ($expected !== $actual) {
-        echo "Actual:   $actual\n";
-        echo "Expected: $expected\n";
-        die();
+    global $blink;
+
+    $result = [];
+
+    foreach ($stones as $stone) {
+        $result[] = $blink(25, (int) $stone);
     }
 
-    for ($i = 0; $i < 25; $i++) {
-        $stone_count = count($stones);
-
-        if ($stone_count < 8) {
-            vecho::msg("step $i: $stone_count stones (" . implode(' ', $stones) . ')');
-        } else {
-            vecho::msg("step $i: $stone_count stones");
-        }
-
-        $stones = blink($stones);
-    }
-
-    return [count($stones)];
+    return $result;
 }
 
 function part2($stones)
 {
-    $total_processed = 0;
-    $state = [];
-    foreach ($stones as $idx => $stone) {
-        $state[] = (object) [
-            'val' => $stone,
-            'blink' => 0,
-            'idx' => $idx,
-        ];
+    global $blink;
+
+    $result = [];
+
+    foreach ($stones as $stone) {
+        $result[] = $blink(75, (int) $stone);
     }
 
-    $max_blink = 75;
-
-    while (!empty($state)) {
-        vecho::debounced_msg(
-            2,
-            "Processed $total_processed \t first stone blink",
-            $state[0]->blink,
-            "\t stones left",
-            count($state),
-            "\t first stone idx",
-            $state[0]->idx
-        );
-
-        list($processed, $state) = partial_blink($state, $max_blink);
-        $total_processed += $processed;
-    }
-
-    return [$total_processed];
+    return $result;
 }
 
 function main(string $filename, bool $part2)
@@ -138,9 +100,9 @@ function main(string $filename, bool $part2)
 }
 
 run_part1('example', false, 55312);
+run_part1('input', false, 185205);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', true, 55312);
 run_part2('input', true);
 echo "\n";
