@@ -16,95 +16,60 @@ function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $grid = [];
-    foreach ($lines as $line) {
-        $line = trim($line);
+    $stones = array_map('intval', explode(' ', trim($lines[0])));
 
-        $grid[] = $line;
-    }
-
-    return new grid($grid);
+    return $stones;
 }
 
-function follow_the_path(grid $vis, grid $grid, pos $start)
+function blink($before)
 {
-    $height = (int) $grid->get($start);
+    $after = [];
 
-    $ret = [];
+    foreach ($before as $stone) {
+        $stone_str = "{$stone}";
+        $odd_number_of_digits = strlen($stone_str) % 2;
 
-    foreach ([N, E, S, W] as $direction) {
-        $next_pos = $start->add($direction);
-        $next_height = (int) $grid->get($next_pos);
-
-        if ($next_height == $height + 1) {
-            $ret[] = $next_pos;
+        if ($stone == 0) {
+            $after[] = 1;
+        } elseif (!$odd_number_of_digits) {
+            $two_stones = str_split($stone_str, strlen($stone_str) >> 1);
+            $after[] = (int) $two_stones[0];
+            $after[] = (int) $two_stones[1];
+        } else {
+            $after[] = $stone * 2024;
         }
     }
 
-    $vis->set($start, '.');
-
-    return $ret;
+    return $after;
 }
 
-function walk_the_trail(grid $grid, pos $start, bool $part2 = false)
+function part1($stones)
 {
-    $visualize = clone $grid;
-    $next = [$start];
-    $ret = [];
+    $test = blink(explode(' ', '0 1 10 99 999'));
+    $actual = implode(' ', $test);
+    $expected = '1 2024 1 0 9 9 2021976';
+    if ($expected !== $actual) {
+        echo "Actual:   $actual\n";
+        echo "Expected: $expected\n";
+        die();
+    }
 
-    while (!empty($next)) {
-        $current = $next;
-        $next = [];
-        foreach ($current as $pos) {
-            if ($grid->get($pos) == '9') {
-                if ($part2) {
-                    $ret[] = $pos;
-                } else {
-                    $ret[(string) $pos] = $pos;
-                }
-            }
+    for ($i = 0; $i < 25; $i++) {
+        vecho::msg("step $i:", implode(' ', $stones));
 
-            foreach (follow_the_path($visualize, $grid, $pos) as $step) {
-                $next[] = $step;
-            }
-
-            $visualize->render(10);
+        if ($i > 5) {
+            vecho::$verbose = false;
         }
+
+        $stones = blink($stones);
     }
 
-    return $ret;
+    return [count($stones)];
 }
 
-function part1($grid)
+function part2($stones)
 {
-    $grid->render();
-
-    $trailheads = $grid->find_all('0');
-
-    $end_counts = [];
-
-    foreach ($trailheads as $start) {
-        $trail_ends = walk_the_trail(clone $grid, $start);
-        $end_counts[] = count($trail_ends);
-    }
-
-    return $end_counts;
-}
-
-function part2($grid)
-{
-    $grid->render();
-
-    $trailheads = $grid->find_all('0');
-
-    $end_counts = [];
-
-    foreach ($trailheads as $start) {
-        $trail_ends = walk_the_trail(clone $grid, $start, part2: true);
-        $end_counts[] = count($trail_ends);
-    }
-
-    return $end_counts;
+    return [23];
 }
 
 function main(string $filename, bool $part2)
@@ -124,7 +89,7 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', false, 55312);
+run_part1('example', true, 55312);
 run_part1('input', false);
 echo "\n";
 
