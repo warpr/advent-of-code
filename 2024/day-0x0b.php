@@ -43,6 +43,25 @@ function blink($before)
     return $after;
 }
 
+function partial_blink($state, $max_blink)
+{
+    $first = array_shift($state);
+    if ($first->blink == $max_blink) {
+        return [1, $state];
+    }
+
+    $new_stones = [];
+    foreach (blink([$first->val]) as $stone) {
+        $new_stones[] = (object) [
+            'val' => $stone,
+            'blink' => $first->blink + 1,
+            'idx' => $first->idx,
+        ];
+    }
+
+    return [0, array_merge($new_stones, $state)];
+}
+
 function part1($stones)
 {
     $test = blink(explode(' ', '0 1 10 99 999'));
@@ -55,10 +74,12 @@ function part1($stones)
     }
 
     for ($i = 0; $i < 25; $i++) {
-        vecho::msg("step $i:", implode(' ', $stones));
+        $stone_count = count($stones);
 
-        if ($i > 5) {
-            vecho::$verbose = false;
+        if ($stone_count < 8) {
+            vecho::msg("step $i: $stone_count stones (" . implode(' ', $stones) . ')');
+        } else {
+            vecho::msg("step $i: $stone_count stones");
         }
 
         $stones = blink($stones);
@@ -69,7 +90,34 @@ function part1($stones)
 
 function part2($stones)
 {
-    return [23];
+    $total_processed = 0;
+    $state = [];
+    foreach ($stones as $idx => $stone) {
+        $state[] = (object) [
+            'val' => $stone,
+            'blink' => 0,
+            'idx' => $idx,
+        ];
+    }
+
+    $max_blink = 75;
+
+    while (!empty($state)) {
+        vecho::debounced_msg(
+            2,
+            "Processed $total_processed \t first stone blink",
+            $state[0]->blink,
+            "\t stones left",
+            count($state),
+            "\t first stone idx",
+            $state[0]->idx
+        );
+
+        list($processed, $state) = partial_blink($state, $max_blink);
+        $total_processed += $processed;
+    }
+
+    return [$total_processed];
 }
 
 function main(string $filename, bool $part2)
@@ -89,10 +137,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 55312);
+run_part1('example', false, 55312);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 81);
-// run_part2('input', false);
+// run_part2('example', true, 55312);
+run_part2('input', true);
 echo "\n";

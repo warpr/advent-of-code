@@ -30,4 +30,17 @@ class vecho
             echo implode(' ', $output) . "\n";
         }
     }
+
+    static function debounced_msg($seconds, ...$args)
+    {
+        static $prev = 0;
+
+        if (time() - $prev < $seconds) {
+            return;
+        }
+
+        static::msg(...$args);
+
+        $prev = time();
+    }
 }
