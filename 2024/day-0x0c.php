@@ -26,12 +26,39 @@ function parse(string $filename, bool $part2)
     return new grid($grid);
 }
 
-function part1($stones)
+function part1($grid)
 {
-    return [23];
+    $regions = [];
+
+    foreach ($grid->walk() as $spot) {
+        if (empty($regions[$spot->val])) {
+            $regions[$spot->val] = (object) [
+                'perimeter' => 0,
+                'area' => 0,
+            ];
+        }
+
+        $p =
+            ($grid->look($spot->pos, N) == $spot->val ? 0 : 1) +
+            ($grid->look($spot->pos, E) == $spot->val ? 0 : 1) +
+            ($grid->look($spot->pos, S) == $spot->val ? 0 : 1) +
+            ($grid->look($spot->pos, W) == $spot->val ? 0 : 1);
+
+        $regions[$spot->val]->area++;
+        $regions[$spot->val]->perimeter += $p;
+    }
+
+    $ret = [];
+    foreach ($regions as $name => $region) {
+        $cost = $region->perimeter * $region->area;
+        vecho::msg("region $name:", $region, " (cost $cost)");
+        $ret[] = $cost;
+    }
+
+    return $ret;
 }
 
-function part2($stones)
+function part2($grid)
 {
     return [23];
 }
@@ -53,7 +80,9 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', false, 1930);
+run_part1('example1', true, 140);
+run_part1('example2', true, 772);
+run_part1('example', true, 1930);
 run_part1('input', false);
 echo "\n";
 
