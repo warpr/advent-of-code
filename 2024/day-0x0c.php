@@ -72,6 +72,69 @@ function find_perimeter(grid $grid, $region)
     return $ret;
 }
 
+function find_sides(grid $grid, $region)
+{
+    $sides = 0;
+    $val = $region->name;
+    $considered = [];
+
+    foreach ($region->spots as $start_pos) {
+        $start_dir = null;
+        foreach ([N, E, S, W] as $dir) {
+            if ($grid->look($start_pos, $dir) != $val) {
+                $start_dir = $dir;
+                break;
+            }
+        }
+
+        if (empty($start_dir)) {
+            continue;
+        }
+
+        $dir = $start_dir;
+        $walk_dir = turn_right($start_dir);
+        $pos = $start_pos;
+
+        $key = "{$pos} - {$dir}";
+        if (!empty($considered[$key])) {
+            continue;
+        }
+
+        while (true) {
+            $key = "{$pos} - {$dir}";
+            $considered[$key] = true;
+
+            $perimeter = $grid->look($pos, $dir);
+            $walking_to = $grid->look($pos, $walk_dir);
+            if ($perimeter != $val && $walking_to == $val) {
+                $pos = $pos->add($walk_dir);
+            } else {
+                $sides++;
+
+                if ($perimeter != $val && $walking_to != $val) {
+                    $dir = turn_right($dir);
+                    $walk_dir = turn_right($walk_dir);
+                } else {
+                    $dir = turn_left($dir);
+                    $walk_dir = turn_left($walk_dir);
+                    $pos = $pos->add($walk_dir);
+                }
+            }
+
+            if ($pos == $start_pos && $dir == $start_dir) {
+                break;
+            }
+
+            if ($sides > 10000) {
+                echo "Unexpected high number of sides\n";
+                die();
+            }
+        }
+    }
+
+    return $sides;
+}
+
 function part1($grid)
 {
     $seen = [];
@@ -111,7 +174,39 @@ function part1($grid)
 
 function part2($grid)
 {
-    return [23];
+    $seen = [];
+    $regions = [];
+
+    foreach ($grid->walk() as $spot) {
+        $spot_str = (string) $spot->pos;
+        $seen_this = $seen[$spot_str] ?? null;
+        if ($seen_this) {
+            continue;
+        }
+
+        $region = find_region($grid, $spot->pos);
+        foreach ($region->spots as $pos) {
+            $pos_str = (string) $pos;
+            $seen[$pos_str] = $pos;
+        }
+
+        $regions[] = $region;
+    }
+
+    $ret = [];
+    foreach ($regions as $region) {
+        $area = count($region->spots);
+        $sides = find_sides($grid, $region);
+
+        $name = $region->name;
+        $cost = $area * $sides;
+
+        $data = compact('area', 'sides', 'cost');
+        vecho::msg("region $name:", $data);
+        $ret[] = $cost;
+    }
+
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -131,11 +226,17 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example1', true, 140);
-run_part1('example2', true, 772);
-run_part1('example', true, 1930);
+run_part1('example1', false, 140);
+run_part1('example2', false, 772);
+run_part1('example', false, 1930);
 run_part1('input', false);
 echo "\n";
 
-run_part2('input', true);
+run_part2('example1', false, 80);
+run_part2('example2', false, 436);
+run_part2('example3', false, 236);
+run_part2('example4', false, 368);
+run_part2('example', false, 1206);
+run_part2('debug', false, 13440);
+run_part2('input', false);
 echo "\n";

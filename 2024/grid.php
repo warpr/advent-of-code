@@ -62,6 +62,11 @@ function turn_right(pos $dir)
     }
 }
 
+function turn_left(pos $dir)
+{
+    return turn_right(turn_right(turn_right($dir)));
+}
+
 function opposite_dir(pos $dir)
 {
     return turn_right(turn_right($dir));
