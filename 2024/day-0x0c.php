@@ -26,32 +26,83 @@ function parse(string $filename, bool $part2)
     return new grid($grid);
 }
 
+function find_region(grid $grid, pos $start)
+{
+    $todo = [$start];
+
+    $name = $grid->get($start);
+    $region = [];
+
+    while (!empty($todo)) {
+        $current = array_pop($todo);
+        $current_str = (string) $current;
+        $seen = $region[$current_str] ?? null;
+        if ($seen) {
+            continue;
+        } else {
+            $region[$current_str] = $current;
+        }
+
+        foreach ([N, E, S, W] as $dir) {
+            $look_at = $current->add($dir);
+
+            if ($grid->get($look_at) == $name) {
+                $todo[] = $look_at;
+            }
+        }
+    }
+
+    return (object) ['name' => $name, 'spots' => $region];
+}
+
+function find_perimeter(grid $grid, $region)
+{
+    $ret = 0;
+
+    foreach ($region->spots as $pos) {
+        $val = $grid->get($pos);
+
+        $ret +=
+            ($grid->look($pos, N) == $val ? 0 : 1) +
+            ($grid->look($pos, E) == $val ? 0 : 1) +
+            ($grid->look($pos, S) == $val ? 0 : 1) +
+            ($grid->look($pos, W) == $val ? 0 : 1);
+    }
+
+    return $ret;
+}
+
 function part1($grid)
 {
+    $seen = [];
     $regions = [];
 
     foreach ($grid->walk() as $spot) {
-        if (empty($regions[$spot->val])) {
-            $regions[$spot->val] = (object) [
-                'perimeter' => 0,
-                'area' => 0,
-            ];
+        $spot_str = (string) $spot->pos;
+        $seen_this = $seen[$spot_str] ?? null;
+        if ($seen_this) {
+            continue;
         }
 
-        $p =
-            ($grid->look($spot->pos, N) == $spot->val ? 0 : 1) +
-            ($grid->look($spot->pos, E) == $spot->val ? 0 : 1) +
-            ($grid->look($spot->pos, S) == $spot->val ? 0 : 1) +
-            ($grid->look($spot->pos, W) == $spot->val ? 0 : 1);
+        $region = find_region($grid, $spot->pos);
+        foreach ($region->spots as $pos) {
+            $pos_str = (string) $pos;
+            $seen[$pos_str] = $pos;
+        }
 
-        $regions[$spot->val]->area++;
-        $regions[$spot->val]->perimeter += $p;
+        $regions[] = $region;
     }
 
     $ret = [];
-    foreach ($regions as $name => $region) {
-        $cost = $region->perimeter * $region->area;
-        vecho::msg("region $name:", $region, " (cost $cost)");
+    foreach ($regions as $region) {
+        $area = count($region->spots);
+        $perimeter = find_perimeter($grid, $region);
+
+        $name = $region->name;
+        $cost = $area * $perimeter;
+
+        $data = compact('area', 'perimeter', 'cost');
+        vecho::msg("region $name:", $data);
         $ret[] = $cost;
     }
 
