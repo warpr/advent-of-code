@@ -30,26 +30,20 @@ function parse(string $filename, bool $part2)
     return $ret;
 }
 
-function part1(array $input, pos $space)
+function simulate(grid $grid, array &$input, pos $space)
 {
-    $stupid_grid = array_fill(0, $space->y, str_repeat('.', $space->x));
-    $grid = new grid($stupid_grid);
-
-    $grid->render();
-
-    for ($s = 0; $s < 100; $s++) {
-        foreach ($input as $idx => $robot) {
-            $grid->set($robot->pos, '.');
-        }
-
-        foreach ($input as $idx => $robot) {
-            $robot->pos = $robot->pos->add_wrap($robot->vel, $space);
-            $grid->set($robot->pos, 'o');
-        }
-
-        $grid->render(1);
+    foreach ($input as $idx => $robot) {
+        $grid->set($robot->pos, '.');
     }
 
+    foreach ($input as $idx => $robot) {
+        $robot->pos = $robot->pos->add_wrap($robot->vel, $space);
+        $grid->set($robot->pos, 'o');
+    }
+}
+
+function quadrants(array &$input, pos $space)
+{
     $hline = $space->y >> 1;
     $vline = $space->x >> 1;
 
@@ -71,8 +65,63 @@ function part1(array $input, pos $space)
     return $quadrants;
 }
 
+function flip_x(pos $pos, pos $space)
+{
+    return new pos($space->x - $pos->x, $pos->y);
+}
+
+function has_symmetry(array $input, pos $space)
+{
+    $vline = $space->x >> 1;
+
+    $all = [];
+    foreach ($input as $robot) {
+        $key = (string) $robot->pos;
+        $all[$key] = true;
+    }
+
+    foreach ($input as $robot) {
+        $flipped = new pos($space->x - $robot->pos->x, $robot->pos->y);
+        if (!array_key_exists((string) $flipped, $all)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function part1(array $input, pos $space)
+{
+    $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
+
+    $grid->render();
+
+    for ($s = 0; $s < 100; $s++) {
+        simulate($grid, $input, $space);
+        $grid->render(1);
+    }
+
+    return quadrants($input, $space);
+}
+
 function part2($input, pos $space)
 {
+    $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
+
+    $max_seconds = 100000000;
+
+    $grid->render(1);
+
+    for ($s = 0; $s < $max_seconds; $s++) {
+        vecho::debounced_msg(5, "Simulating ($s seconds)");
+        simulate($grid, $input, $space);
+
+        if (has_symmetry($input, $space)) {
+            $grid->render(5000);
+            vecho::msg("Symmetry found? ($s seconds)");
+        }
+    }
+
     return [23];
 }
 
@@ -107,6 +156,6 @@ run_part1('example', false, 12);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 875318608908);
-// run_part2('input', false);
+// run_part2('example', true);
+run_part2('input', true);
 echo "\n";
