@@ -24,6 +24,26 @@ class pos implements JsonSerializable
         return new pos($this->x + $pos->x, $this->y + $pos->y);
     }
 
+    function add_wrap(pos $pos, pos $space)
+    {
+        $x = $this->x + $pos->x;
+        $y = $this->y + $pos->y;
+
+        if ($x < 0) {
+            $x += $space->x;
+        } elseif ($x >= $space->x) {
+            $x -= $space->x;
+        }
+
+        if ($y < 0) {
+            $y += $space->y;
+        } elseif ($y >= $space->y) {
+            $y -= $space->y;
+        }
+
+        return new pos($x, $y);
+    }
+
     function __toString(): string
     {
         if (empty($this->name)) {
@@ -202,13 +222,15 @@ class grid
         return $this->get($pos->add($dir));
     }
 
-    function render(int $sleep = 25)
+    function render(int $sleep = 25, bool $clear = true)
     {
         if (!vecho::$verbose) {
             return;
         }
 
-        clear_screen();
+        if ($clear) {
+            clear_screen();
+        }
 
         foreach ($this->grid as $line) {
             echo $line . "\n";

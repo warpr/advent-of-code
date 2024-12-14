@@ -16,151 +16,91 @@ function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $machines = [];
-    $current = [];
-
+    $ret = [];
     foreach ($lines as $line) {
-        if (preg_match('/Button ([AB]+): X\+([0-9]+), Y\+([0-9]+)/', $line, $matches)) {
-            $name = strtolower('button-' . $matches[1]);
-            $current[$name] = ['x' => (int) $matches[2], 'y' => (int) $matches[3]];
-        }
-
-        if (preg_match('/Prize: X=([0-9]+), Y=([0-9]+)/', $line, $matches)) {
-            $current['prize'] = ['x' => (int) $matches[1], 'y' => (int) $matches[2]];
-        }
-
-        if (empty(trim($line))) {
-            $machines[] = $current;
-            $current = [];
+        // if (preg_match("/p=([0-9-]+),([0-9-]+), v=([0-9-]+),([0-9-]+)/", $line, $matches)) {
+        if (preg_match('/p=([0-9-]+),([0-9-]+)\s+v=([0-9-]+),([0-9-]+)/', $line, $matches)) {
+            $ret[] = (object) [
+                'pos' => new pos((int) $matches[1], (int) $matches[2]),
+                'vel' => new pos((int) $matches[3], (int) $matches[4]),
+            ];
         }
     }
-
-    if (!empty($current)) {
-        $machines[] = $current;
-    }
-
-    return $machines;
-}
-
-function brute_force($machine)
-{
-    $px = $machine['prize']['x'];
-    $py = $machine['prize']['y'];
-    $ax = $machine['button-a']['x'];
-    $ay = $machine['button-a']['y'];
-    $bx = $machine['button-b']['x'];
-    $by = $machine['button-b']['y'];
-
-    $answers = [];
-    for ($a = 0; $a < 100; $a++) {
-        for ($b = 0; $b < 100; $b++) {
-            $x = $ax * $a + $bx * $b;
-            $y = $ay * $a + $by * $b;
-
-            if ($x == $px && $y == $py) {
-                $answers[] = [$a, $b];
-            }
-        }
-    }
-
-    return $answers;
-}
-
-function to_integer(float $val)
-{
-    $tmp = abs(round($val) - $val);
-    if ($tmp < 0.0001) {
-        return (int) round($val);
-    }
-
-    return null;
-}
-
-function math($machine)
-{
-    $px = $machine['prize']['x'] + 10000000000000;
-    $py = $machine['prize']['y'] + 10000000000000;
-    $ax = $machine['button-a']['x'];
-    $ay = $machine['button-a']['y'];
-    $bx = $machine['button-b']['x'];
-    $by = $machine['button-b']['y'];
-
-    $b = to_integer(($py - ($px * $ay) / $ax) / ($by - ($ay * $bx) / $ax));
-    if ($b === null) {
-        return [];
-    }
-    $a = to_integer($px / $ax - ($b * $bx) / $ax);
-    if ($a === null) {
-        return [];
-    }
-
-    return [[$a, $b]];
-}
-
-function cost(array $answers)
-{
-    return $answers[0] * 3 + $answers[1];
-}
-
-function part1($input)
-{
-    $ret = [];
-
-    foreach ($input as $idx => $machine) {
-        $valid_answers = brute_force($machine);
-        if (empty($valid_answers)) {
-            vecho::msg("machine $idx has no valid answers", compact('machine'));
-            continue;
-        }
-
-        $costs = array_map('cost', $valid_answers);
-        sort($costs);
-        vecho::msg("machine $idx valid answers", compact('machine', 'valid_answers', 'costs'));
-        $ret[] = array_shift($costs);
-    }
-
-    vecho::$verbose = false;
 
     return $ret;
 }
 
-function part2($input)
+function part1(array $input, pos $space)
 {
-    $ret = [];
+    $stupid_grid = array_fill(0, $space->y, str_repeat('.', $space->x));
+    $grid = new grid($stupid_grid);
 
-    foreach ($input as $idx => $machine) {
-        $valid_answers = math($machine);
-        if (empty($valid_answers)) {
-            vecho::msg("machine $idx has no valid answers", compact('machine'));
-            continue;
+    $grid->render();
+
+    for ($s = 0; $s < 100; $s++) {
+        foreach ($input as $idx => $robot) {
+            $grid->set($robot->pos, '.');
         }
 
-        $costs = array_map('cost', $valid_answers);
-        sort($costs);
-        vecho::msg("machine $idx valid answers", compact('machine', 'valid_answers', 'costs'));
-        $ret[] = array_shift($costs);
+        foreach ($input as $idx => $robot) {
+            $robot->pos = $robot->pos->add_wrap($robot->vel, $space);
+            $grid->set($robot->pos, 'o');
+        }
+
+        $grid->render(1);
     }
 
-    vecho::$verbose = false;
+    $hline = $space->y >> 1;
+    $vline = $space->x >> 1;
 
-    return $ret;
+    $quadrants = [0, 0, 0, 0];
+    foreach ($input as $robot) {
+        $pos = $robot->pos;
+
+        if ($pos->x < $vline && $pos->y < $hline) {
+            $quadrants[0]++;
+        } elseif ($pos->x > $vline && $pos->y < $hline) {
+            $quadrants[1]++;
+        } elseif ($pos->x < $vline && $pos->y > $hline) {
+            $quadrants[2]++;
+        } elseif ($pos->x > $vline && $pos->y > $hline) {
+            $quadrants[3]++;
+        }
+    }
+
+    return $quadrants;
+}
+
+function part2($input, pos $space)
+{
+    return [23];
 }
 
 function main(string $filename, bool $part2)
 {
+    $space = new pos(101, 103);
+    if ($filename === 'day-0x0e.example.txt') {
+        $space = new pos(11, 7);
+    }
+
     $parsed = parse($filename, $part2);
 
     if ($part2) {
-        $values = part2($parsed);
+        $values = part2($parsed, $space);
     } else {
-        $values = part1($parsed);
+        $values = part1($parsed, $space);
     }
 
     if (vecho::$verbose) {
         print_r($values);
     }
 
-    return array_sum($values);
+    $ret = 1;
+    foreach ($values as $v) {
+        $ret = $ret * $v;
+    }
+
+    return $ret;
 }
 
 run_part1('example', false, 12);
