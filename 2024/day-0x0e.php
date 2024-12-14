@@ -65,31 +65,6 @@ function quadrants(array &$input, pos $space)
     return $quadrants;
 }
 
-function flip_x(pos $pos, pos $space)
-{
-    return new pos($space->x - $pos->x, $pos->y);
-}
-
-function has_symmetry(array $input, pos $space)
-{
-    $vline = $space->x >> 1;
-
-    $all = [];
-    foreach ($input as $robot) {
-        $key = (string) $robot->pos;
-        $all[$key] = true;
-    }
-
-    foreach ($input as $robot) {
-        $flipped = new pos($space->x - $robot->pos->x, $robot->pos->y);
-        if (!array_key_exists((string) $flipped, $all)) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 function part1(array $input, pos $space)
 {
     $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
@@ -104,25 +79,58 @@ function part1(array $input, pos $space)
     return quadrants($input, $space);
 }
 
+function has_picture_frame(array &$input)
+{
+    $per_y = [];
+
+    foreach ($input as $robot) {
+        $per_y[$robot->pos->y][$robot->pos->x] = true;
+    }
+
+    foreach ($per_y as $y => $x_positions) {
+        $x_list = array_keys($x_positions);
+        sort($x_list);
+
+        $consec_count = 0;
+        $prev_x = null;
+        foreach ($x_list as $x) {
+            if ($prev_x === null) {
+                $prev_x = $x;
+                continue;
+            }
+
+            if ($x == $prev_x + 1) {
+                $consec_count++;
+            }
+
+            $prev_x = $x;
+
+            if ($consec_count > 25) {
+                // found a 10 pixel horizontal line
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
 function part2($input, pos $space)
 {
     $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
 
     $max_seconds = 100000000;
 
-    $grid->render(1);
-
     for ($s = 0; $s < $max_seconds; $s++) {
         vecho::debounced_msg(5, "Simulating ($s seconds)");
         simulate($grid, $input, $space);
 
-        if (has_symmetry($input, $space)) {
-            $grid->render(5000);
-            vecho::msg("Symmetry found? ($s seconds)");
+        if (has_picture_frame($input)) {
+            $grid->render(1);
+            vecho::msg("\n\nPicture found? ($s seconds)\n");
+            return [$s + 1];
         }
     }
-
-    return [23];
 }
 
 function main(string $filename, bool $part2)
