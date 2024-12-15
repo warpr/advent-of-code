@@ -16,154 +16,123 @@ function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $ret = [];
+    $grid = [];
+    while (!empty($lines)) {
+        $line = trim(array_shift($lines));
+        if (empty($line)) {
+            break;
+        }
+
+        $grid[] = $line;
+    }
+
+    $grid = new grid($grid);
+
+    $movements = [];
     foreach ($lines as $line) {
-        // if (preg_match("/p=([0-9-]+),([0-9-]+), v=([0-9-]+),([0-9-]+)/", $line, $matches)) {
-        if (preg_match('/p=([0-9-]+),([0-9-]+)\s+v=([0-9-]+),([0-9-]+)/', $line, $matches)) {
-            $ret[] = (object) [
-                'pos' => new pos((int) $matches[1], (int) $matches[2]),
-                'vel' => new pos((int) $matches[3], (int) $matches[4]),
-            ];
+        foreach (str_split($line) as $chr) {
+            switch ($chr) {
+                case '^':
+                    $movements[] = N;
+                    break;
+                case '>':
+                    $movements[] = E;
+                    break;
+                case '<':
+                    $movements[] = W;
+                    break;
+                case 'v':
+                case 'V':
+                    $movements[] = S;
+                    break;
+            }
         }
     }
 
-    return $ret;
+    return compact('grid', 'movements');
 }
 
-function simulate(grid $grid, array &$input, pos $space)
+function simulate(int $stepno, grid $grid, pos $robot, pos $dir)
 {
-    foreach ($input as $idx => $robot) {
-        $grid->set($robot->pos, '.');
+    $pos = $robot;
+
+    $current = '@';
+    $found = [(object) ['val' => '@', 'pos' => $pos]];
+    do {
+        $pos = $pos->add($dir);
+        $current = $grid->get($pos);
+        $found[] = (object) ['val' => $current, 'pos' => $pos];
+    } while ($current == 'O');
+
+    $prefix = "$stepno. Seeing [" . implode('', array_column($found, 'val')) . ']';
+
+    $end = array_pop($found);
+    if ($end->val != '.') {
+        vecho::msg($prefix . ', not moving');
+        return $robot;
     }
 
-    foreach ($input as $idx => $robot) {
-        $robot->pos = $robot->pos->add_wrap($robot->vel, $space);
-        $grid->set($robot->pos, 'o');
+    vecho::msg($prefix . ', moving (maybe pushing boxes)');
+
+    $to_move = array_reverse($found);
+    foreach ($to_move as $t) {
+        $grid->set($t->pos->add($dir), $t->val);
     }
+    $grid->set($robot, '.');
+
+    return $robot->add($dir);
 }
 
-function quadrants(array &$input, pos $space)
+function part1(array $input)
 {
-    $hline = $space->y >> 1;
-    $vline = $space->x >> 1;
-
-    $quadrants = [0, 0, 0, 0];
-    foreach ($input as $robot) {
-        $pos = $robot->pos;
-
-        if ($pos->x < $vline && $pos->y < $hline) {
-            $quadrants[0]++;
-        } elseif ($pos->x > $vline && $pos->y < $hline) {
-            $quadrants[1]++;
-        } elseif ($pos->x < $vline && $pos->y > $hline) {
-            $quadrants[2]++;
-        } elseif ($pos->x > $vline && $pos->y > $hline) {
-            $quadrants[3]++;
-        }
-    }
-
-    return $quadrants;
-}
-
-function part1(array $input, pos $space)
-{
-    $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
+    extract($input);
 
     $grid->render();
 
-    for ($s = 0; $s < 100; $s++) {
-        simulate($grid, $input, $space);
-        $grid->render(1);
+    $robot = $grid->find_first('@');
+
+    foreach ($movements as $step => $m) {
+        $robot = simulate($step, $grid, $robot, $m);
+        $grid->render(10);
     }
 
-    return quadrants($input, $space);
+    $boxes = $grid->find_all('O');
+
+    $gps = [];
+    foreach ($boxes as $box) {
+        $gps[] = 100 * $box->y + $box->x;
+    }
+
+    return $gps;
 }
 
-function has_picture_frame(array &$input)
+function part2(array $input)
 {
-    $per_y = [];
-
-    foreach ($input as $robot) {
-        $per_y[$robot->pos->y][$robot->pos->x] = true;
-    }
-
-    foreach ($per_y as $y => $x_positions) {
-        $x_list = array_keys($x_positions);
-        sort($x_list);
-
-        $consec_count = 0;
-        $prev_x = null;
-        foreach ($x_list as $x) {
-            if ($prev_x === null) {
-                $prev_x = $x;
-                continue;
-            }
-
-            if ($x == $prev_x + 1) {
-                $consec_count++;
-            }
-
-            $prev_x = $x;
-
-            if ($consec_count > 25) {
-                // found a 10 pixel horizontal line
-                return true;
-            }
-        }
-    }
-
-    return false;
-}
-
-function part2($input, pos $space)
-{
-    $grid = new grid(array_fill(0, $space->y, str_repeat('.', $space->x)));
-
-    $max_seconds = 100000000;
-
-    for ($s = 0; $s < $max_seconds; $s++) {
-        vecho::debounced_msg(5, "Simulating ($s seconds)");
-        simulate($grid, $input, $space);
-
-        if (has_picture_frame($input)) {
-            $grid->render(1);
-            vecho::msg("\n\nPicture found? ($s seconds)\n");
-            return [$s + 1];
-        }
-    }
+    return [23];
 }
 
 function main(string $filename, bool $part2)
 {
-    $space = new pos(101, 103);
-    if ($filename === 'day-0x0e.example.txt') {
-        $space = new pos(11, 7);
-    }
-
     $parsed = parse($filename, $part2);
 
     if ($part2) {
-        $values = part2($parsed, $space);
+        $values = part2($parsed);
     } else {
-        $values = part1($parsed, $space);
+        $values = part1($parsed);
     }
 
     if (vecho::$verbose) {
         print_r($values);
     }
 
-    $ret = 1;
-    foreach ($values as $v) {
-        $ret = $ret * $v;
-    }
-
-    return $ret;
+    return array_sum($values);
 }
 
-run_part1('example', false, 12);
+run_part1('example1', true, 2028);
+run_part1('example', true, 10092);
 run_part1('input', false);
 echo "\n";
 
 // run_part2('example', true);
-run_part2('input', true);
+// run_part2('input', true);
 echo "\n";
