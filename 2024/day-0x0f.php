@@ -122,17 +122,27 @@ function next_step(grid $grid, array $locations, pos $dir)
         $front = $loc->pos->add($dir);
         $current = $grid->get($front);
 
+        if ($dir == N) {
+            $turn_right_token = '[';
+            $turn_left_token = ']';
+        } else {
+            $turn_right_token = ']';
+            $turn_left_token = '[';
+        }
+
         switch ($current) {
-            case '[':
+            case $turn_right_token:
                 $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
                 $pos = $front->add(turn_right($dir));
                 $val = $grid->get($pos);
+                vecho::msg('right', $dir, '->', turn_right($dir), 'val:', $val, $current);
                 $next_row[(string) $pos] = (object) compact('val', 'pos');
                 break;
-            case ']':
+            case $turn_left_token:
                 $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
                 $pos = $front->add(turn_left($dir));
                 $val = $grid->get($pos);
+                vecho::msg('left', $dir, '->', turn_left($dir), 'val:', $val, $current);
                 $next_row[(string) $pos] = (object) compact('val', 'pos');
                 break;
             case '.':
@@ -149,7 +159,9 @@ function simulate_v(int $stepno, grid $grid, pos $robot, pos $dir)
 {
     $rows = [];
 
-    $next_row = [(object) ['val' => '@', 'pos' => $robot]];
+    $next_row = [];
+    $next_row[(string) $robot] = (object) ['val' => '@', 'pos' => $robot];
+
     $rows[] = $next_row;
     while (true) {
         $next_row = next_step($grid, $next_row, $dir);
@@ -167,7 +179,6 @@ function simulate_v(int $stepno, grid $grid, pos $robot, pos $dir)
         foreach ($row as $t) {
             $grid->set($t->pos->add($dir), $t->val);
             $grid->set($t->pos, '.');
-            $grid->render(10);
         }
     }
 
@@ -238,11 +249,7 @@ function part2(array $input)
 
     foreach ($movements as $step => $m) {
         $robot = simulate2($step, $grid, $robot, $m);
-        $grid->render($step > 180 ? 500 : 1);
-
-        if ($step > 220) {
-            die();
-        }
+        $grid->render(100);
     }
 
     $boxes = $grid->find_all('[');
@@ -251,6 +258,8 @@ function part2(array $input)
     foreach ($boxes as $box) {
         $gps[] = 100 * $box->y + $box->x;
     }
+
+    vecho::$verbose = false;
 
     return $gps;
 }
@@ -278,5 +287,5 @@ run_part1('input', false);
 echo "\n";
 
 run_part2('example', true, 9021);
-// run_part2('input', true);
+run_part2('input', false, 1582688);
 echo "\n";
