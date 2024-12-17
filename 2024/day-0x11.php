@@ -12,256 +12,186 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/common.php';
 
+const adv = 0;
+const bxl = 1;
+const bst = 2;
+const jnz = 3;
+const bxc = 4;
+const out = 5;
+const bdv = 6;
+const cdv = 7;
+
+function empty_state()
+{
+    return [
+        'ax' => 0,
+        'bx' => 0,
+        'cx' => 0,
+        'ip' => 0,
+        'mem' => [],
+        'out' => [],
+    ];
+}
+
 function parse(string $filename, bool $part2)
 {
     $lines = file($filename);
 
-    $grid = [];
-    while (!empty($lines)) {
-        $line = trim(array_shift($lines));
-        if (empty($line)) {
-            break;
-        }
+    $state = empty_state();
 
-        $grid[] = $line;
-    }
-
-    $grid = new grid($grid);
-
-    $movements = [];
     foreach ($lines as $line) {
-        foreach (str_split($line) as $chr) {
-            switch ($chr) {
-                case '^':
-                    $movements[] = N;
-                    break;
-                case '>':
-                    $movements[] = E;
-                    break;
-                case '<':
-                    $movements[] = W;
-                    break;
-                case 'v':
-                case 'V':
-                    $movements[] = S;
-                    break;
-            }
+        if (preg_match('/Register ([A-Z]): ([0-9]+)/', $line, $matches)) {
+            $reg = strtolower($matches[1] . 'X');
+            $state[$reg] = (int) $matches[2];
+        }
+
+        if (preg_match('/Program: (.*)/', $line, $matches)) {
+            $state['mem'] = array_map('intval', explode(',', trim($matches[1])));
         }
     }
 
-    return compact('grid', 'movements');
+    return $state;
 }
 
-function simulate(int $stepno, grid $grid, pos $robot, pos $dir)
+function combo(int $operand, array $state)
 {
-    $pos = $robot;
-
-    $current = '@';
-    $found = [(object) ['val' => '@', 'pos' => $pos]];
-    do {
-        $pos = $pos->add($dir);
-        $current = $grid->get($pos);
-        $found[] = (object) ['val' => $current, 'pos' => $pos];
-    } while ($current == 'O');
-
-    $prefix = "$stepno. Seeing [" . implode('', array_column($found, 'val')) . ']';
-
-    $end = array_pop($found);
-    if ($end->val != '.') {
-        vecho::msg($prefix . ', not moving');
-        return $robot;
+    switch ($operand) {
+        case 4:
+            return $state['ax'];
+        case 5:
+            return $state['bx'];
+        case 6:
+            return $state['cx'];
+        case 7:
+            die('illegal combo operand');
+        default:
+            return $operand;
     }
-
-    vecho::msg($prefix . ', moving (maybe pushing boxes)');
-
-    $to_move = array_reverse($found);
-    foreach ($to_move as $t) {
-        $grid->set($t->pos->add($dir), $t->val);
-    }
-    $grid->set($robot, '.');
-
-    return $robot->add($dir);
 }
 
-function simulate_h(int $stepno, grid $grid, pos $robot, pos $dir)
+function test_execute()
 {
-    $pos = $robot;
-
-    $current = '@';
-    $found = [(object) ['val' => '@', 'pos' => $pos]];
-    do {
-        $pos = $pos->add($dir);
-        $current = $grid->get($pos);
-        $found[] = (object) ['val' => $current, 'pos' => $pos];
-    } while ($current == '[' || $current == ']');
-
-    $prefix = "$stepno. Seeing [" . implode('', array_column($found, 'val')) . ']';
-
-    $end = array_pop($found);
-    if ($end->val != '.') {
-        vecho::msg($prefix . ', not moving');
-        return $robot;
+    $state = empty_state();
+    $state['cx'] = 9;
+    $state['mem'] = [2, 6];
+    $output = run($state);
+    if ($output['bx'] !== 1) {
+        die('If register C contains 9, the program 2,6 would set register B to 1.');
     }
 
-    vecho::msg($prefix . ', moving (maybe pushing boxes)');
-
-    $to_move = array_reverse($found);
-    foreach ($to_move as $t) {
-        $grid->set($t->pos->add($dir), $t->val);
+    $state = empty_state();
+    $state['ax'] = 10;
+    $state['mem'] = [5, 0, 5, 1, 5, 4];
+    $output = run($state);
+    $out_str = implode(',', $output['out']);
+    if ($out_str !== '0,1,2') {
+        print_r(compact('out_str'));
+        die('If register A contains 10, the program 5,0,5,1,5,4 would output 0,1,2.');
     }
-    $grid->set($robot, '.');
 
-    return $robot->add($dir);
+    $state = empty_state();
+    $state['ax'] = 2024;
+    $state['mem'] = [0, 1, 5, 4, 3, 0];
+    $output = run($state);
+    $out_str = implode(',', $output['out']);
+    if ($out_str !== '4,2,5,6,7,7,7,7,3,1,0') {
+        print_r(['ax' => $output['ax'], 'out' => $out_str]);
+        die(
+            'If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.'
+        );
+    }
+    if ($output['ax']) {
+        print_r(['ax' => $output['ax'], 'out' => $out_str]);
+        die(
+            'If register A contains 2024, the program 0,1,5,4,3,0 would output 4,2,5,6,7,7,7,7,3,1,0 and leave 0 in register A.'
+        );
+    }
+
+    $state = empty_state();
+    $state['bx'] = 29;
+    $state['mem'] = [1, 7];
+    $output = run($state);
+
+    if ($output['bx'] !== 26) {
+        die('If register B contains 29, the program 1,7 would set register B to 26.');
+    }
+
+    $state = empty_state();
+    $state['bx'] = 2024;
+    $state['cx'] = 43690;
+    $state['mem'] = [4, 0];
+    $output = run($state);
+    if ($output['bx'] !== 44354) {
+        die(
+            'If register B contains 2024 and register C contains 43690, the program 4,0 would set register B to 44354.'
+        );
+    }
+
+    echo "CPU diagnostics OK\n";
 }
 
-function next_step(grid $grid, array $locations, pos $dir)
+function execute(array $state): array
 {
-    $next_row = [];
+    $ip = $state['ip'];
 
-    foreach ($locations as $loc) {
-        $front = $loc->pos->add($dir);
-        $current = $grid->get($front);
+    $opcode = $state['mem'][$state['ip']++];
+    $operand = $state['mem'][$state['ip']++];
 
-        if ($dir == N) {
-            $turn_right_token = '[';
-            $turn_left_token = ']';
-        } else {
-            $turn_right_token = ']';
-            $turn_left_token = '[';
-        }
+    //    vecho::msg("ip:", $ip, "ax:", $state['ax'], "bx:", $state['bx'], "cx:", $state['cx'], "out:", $state['out']);
 
-        switch ($current) {
-            case $turn_right_token:
-                $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
-                $pos = $front->add(turn_right($dir));
-                $val = $grid->get($pos);
-                vecho::msg('right', $dir, '->', turn_right($dir), 'val:', $val, $current);
-                $next_row[(string) $pos] = (object) compact('val', 'pos');
-                break;
-            case $turn_left_token:
-                $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
-                $pos = $front->add(turn_left($dir));
-                $val = $grid->get($pos);
-                vecho::msg('left', $dir, '->', turn_left($dir), 'val:', $val, $current);
-                $next_row[(string) $pos] = (object) compact('val', 'pos');
-                break;
-            case '.':
-                break;
-            default:
-                return false;
-        }
-    }
-
-    return $next_row;
-}
-
-function simulate_v(int $stepno, grid $grid, pos $robot, pos $dir)
-{
-    $rows = [];
-
-    $next_row = [];
-    $next_row[(string) $robot] = (object) ['val' => '@', 'pos' => $robot];
-
-    $rows[] = $next_row;
-    while (true) {
-        $next_row = next_step($grid, $next_row, $dir);
-        if ($next_row === false) {
-            return $robot;
-        }
-        if (empty($next_row)) {
+    switch ($opcode) {
+        case adv:
+            $val = $state['ax'] / pow(2, combo($operand, $state));
+            $state['ax'] = intval($val);
             break;
-        }
-        $rows[] = $next_row;
+        case bdv:
+            $val = $state['ax'] / pow(2, combo($operand, $state));
+            $state['bx'] = intval($val);
+            break;
+        case cdv:
+            $val = $state['ax'] / pow(2, combo($operand, $state));
+            $state['cx'] = intval($val);
+            break;
+        case bxl:
+            $state['bx'] = $state['bx'] ^ $operand;
+            break;
+        case bst:
+            $state['bx'] = combo($operand, $state) % 8;
+            break;
+        case jnz:
+            if ($state['ax'] != 0) {
+                $state['ip'] = $operand;
+            }
+            break;
+        case bxc:
+            $state['bx'] = $state['bx'] ^ $state['cx'];
+            break;
+        case out:
+            $state['out'][] = combo($operand, $state) % 8;
+            break;
     }
 
-    $to_move = array_reverse($rows);
-    foreach ($to_move as $row) {
-        foreach ($row as $t) {
-            $grid->set($t->pos->add($dir), $t->val);
-            $grid->set($t->pos, '.');
-        }
-    }
-
-    return $grid->find_first('@');
+    return $state;
 }
 
-function simulate2(int $stepno, grid $grid, pos $robot, pos $dir)
+function run(array $state)
 {
-    if (is_horizontal($dir)) {
-        return simulate_h($stepno, $grid, $robot, $dir);
-    } else {
-        return simulate_v($stepno, $grid, $robot, $dir);
+    while (isset($state['mem'][$state['ip']])) {
+        $state = execute($state);
     }
+
+    return $state;
 }
 
 function part1(array $input)
 {
-    extract($input);
-
-    $grid->render();
-
-    $robot = $grid->find_first('@');
-
-    foreach ($movements as $step => $m) {
-        $robot = simulate($step, $grid, $robot, $m);
-        $grid->render(10);
-    }
-
-    $boxes = $grid->find_all('O');
-
-    $gps = [];
-    foreach ($boxes as $box) {
-        $gps[] = 100 * $box->y + $box->x;
-    }
-
-    return $gps;
-}
-
-function double_grid(grid $grid): grid
-{
-    $grid2 = [];
-    foreach ($grid->grid as $row) {
-        $line = [];
-        foreach (str_split($row) as $chr) {
-            if ($chr == 'O') {
-                $line[] = '[';
-                $line[] = ']';
-            } elseif ($chr == '@') {
-                $line[] = '@';
-                $line[] = '.';
-            } else {
-                $line[] = $chr;
-                $line[] = $chr;
-            }
-        }
-        $grid2[] = implode('', $line);
-    }
-
-    return new grid($grid2);
+    $output = run($input);
+    return $output['out'];
 }
 
 function part2(array $input)
 {
-    extract($input);
-
-    $grid = double_grid($grid);
-    $robot = $grid->find_first('@');
-
-    foreach ($movements as $step => $m) {
-        $robot = simulate2($step, $grid, $robot, $m);
-        $grid->render(100);
-    }
-
-    $boxes = $grid->find_all('[');
-
-    $gps = [];
-    foreach ($boxes as $box) {
-        $gps[] = 100 * $box->y + $box->x;
-    }
-
-    vecho::$verbose = false;
-
-    return $gps;
+    return [23];
 }
 
 function main(string $filename, bool $part2)
@@ -278,14 +208,15 @@ function main(string $filename, bool $part2)
         print_r($values);
     }
 
-    return array_sum($values);
+    return implode(',', $values);
 }
 
-run_part1('example1', false, 2028);
-run_part1('example', false, 10092);
+test_execute();
+
+run_part1('example', false, '4,6,3,5,6,3,5,2,1,0');
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 9021);
-run_part2('input', false, 1582688);
+// run_part2('example', true, 9021);
+// run_part2('input', false, 1582688);
 echo "\n";
