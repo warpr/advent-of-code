@@ -191,6 +191,23 @@ function part1(array $input)
 
 function part2(array $input)
 {
+    $program = $input['mem'];
+
+    $answer = 0;
+    $inert = json_encode($input);
+
+    while (true) {
+        $answer++;
+        vecho::debounced_msg(2, "Trying AX = $answer");
+
+        $copy = json_decode($inert, true);
+        $copy['ax'] = $answer;
+        $output = run($copy);
+        if ($output['out'] == $program) {
+            return [$answer];
+        }
+    }
+
     return [23];
 }
 
@@ -217,6 +234,6 @@ run_part1('example', false, '4,6,3,5,6,3,5,2,1,0');
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', true, 9021);
-// run_part2('input', false, 1582688);
+run_part2('example1', true, '117440');
+run_part2('input', true);
 echo "\n";
