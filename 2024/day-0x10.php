@@ -26,242 +26,98 @@ function parse(string $filename, bool $part2)
         $grid[] = $line;
     }
 
-    $grid = new grid($grid);
-
-    $movements = [];
-    foreach ($lines as $line) {
-        foreach (str_split($line) as $chr) {
-            switch ($chr) {
-                case '^':
-                    $movements[] = N;
-                    break;
-                case '>':
-                    $movements[] = E;
-                    break;
-                case '<':
-                    $movements[] = W;
-                    break;
-                case 'v':
-                case 'V':
-                    $movements[] = S;
-                    break;
-            }
-        }
-    }
-
-    return compact('grid', 'movements');
+    return new grid($grid);
 }
 
-function simulate(int $stepno, grid $grid, pos $robot, pos $dir)
+class edge
 {
-    $pos = $robot;
-
-    $current = '@';
-    $found = [(object) ['val' => '@', 'pos' => $pos]];
-    do {
-        $pos = $pos->add($dir);
-        $current = $grid->get($pos);
-        $found[] = (object) ['val' => $current, 'pos' => $pos];
-    } while ($current == 'O');
-
-    $prefix = "$stepno. Seeing [" . implode('', array_column($found, 'val')) . ']';
-
-    $end = array_pop($found);
-    if ($end->val != '.') {
-        vecho::msg($prefix . ', not moving');
-        return $robot;
+    function __construct(
+        public readonly pos $pos,
+        public readonly pos $dir,
+        public readonly array $path
+    ) {
     }
 
-    vecho::msg($prefix . ', moving (maybe pushing boxes)');
-
-    $to_move = array_reverse($found);
-    foreach ($to_move as $t) {
-        $grid->set($t->pos->add($dir), $t->val);
-    }
-    $grid->set($robot, '.');
-
-    return $robot->add($dir);
-}
-
-function simulate_h(int $stepno, grid $grid, pos $robot, pos $dir)
-{
-    $pos = $robot;
-
-    $current = '@';
-    $found = [(object) ['val' => '@', 'pos' => $pos]];
-    do {
-        $pos = $pos->add($dir);
-        $current = $grid->get($pos);
-        $found[] = (object) ['val' => $current, 'pos' => $pos];
-    } while ($current == '[' || $current == ']');
-
-    $prefix = "$stepno. Seeing [" . implode('', array_column($found, 'val')) . ']';
-
-    $end = array_pop($found);
-    if ($end->val != '.') {
-        vecho::msg($prefix . ', not moving');
-        return $robot;
-    }
-
-    vecho::msg($prefix . ', moving (maybe pushing boxes)');
-
-    $to_move = array_reverse($found);
-    foreach ($to_move as $t) {
-        $grid->set($t->pos->add($dir), $t->val);
-    }
-    $grid->set($robot, '.');
-
-    return $robot->add($dir);
-}
-
-function next_step(grid $grid, array $locations, pos $dir)
-{
-    $next_row = [];
-
-    foreach ($locations as $loc) {
-        $front = $loc->pos->add($dir);
-        $current = $grid->get($front);
-
-        if ($dir == N) {
-            $turn_right_token = '[';
-            $turn_left_token = ']';
-        } else {
-            $turn_right_token = ']';
-            $turn_left_token = '[';
-        }
-
-        switch ($current) {
-            case $turn_right_token:
-                $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
-                $pos = $front->add(turn_right($dir));
-                $val = $grid->get($pos);
-                vecho::msg('right', $dir, '->', turn_right($dir), 'val:', $val, $current);
-                $next_row[(string) $pos] = (object) compact('val', 'pos');
-                break;
-            case $turn_left_token:
-                $next_row[(string) $front] = (object) ['val' => $current, 'pos' => $front];
-                $pos = $front->add(turn_left($dir));
-                $val = $grid->get($pos);
-                vecho::msg('left', $dir, '->', turn_left($dir), 'val:', $val, $current);
-                $next_row[(string) $pos] = (object) compact('val', 'pos');
-                break;
-            case '.':
-                break;
-            default:
-                return false;
-        }
-    }
-
-    return $next_row;
-}
-
-function simulate_v(int $stepno, grid $grid, pos $robot, pos $dir)
-{
-    $rows = [];
-
-    $next_row = [];
-    $next_row[(string) $robot] = (object) ['val' => '@', 'pos' => $robot];
-
-    $rows[] = $next_row;
-    while (true) {
-        $next_row = next_step($grid, $next_row, $dir);
-        if ($next_row === false) {
-            return $robot;
-        }
-        if (empty($next_row)) {
-            break;
-        }
-        $rows[] = $next_row;
-    }
-
-    $to_move = array_reverse($rows);
-    foreach ($to_move as $row) {
-        foreach ($row as $t) {
-            $grid->set($t->pos->add($dir), $t->val);
-            $grid->set($t->pos, '.');
-        }
-    }
-
-    return $grid->find_first('@');
-}
-
-function simulate2(int $stepno, grid $grid, pos $robot, pos $dir)
-{
-    if (is_horizontal($dir)) {
-        return simulate_h($stepno, $grid, $robot, $dir);
-    } else {
-        return simulate_v($stepno, $grid, $robot, $dir);
+    function __toString()
+    {
+        return '<' . $this->pos->x . ',' . $this->pos->y . ',' . $this->dir->name . '>';
     }
 }
 
-function part1(array $input)
+function shortest_paths(grid $grid): array
 {
-    extract($input);
-
     $grid->render();
+    $start = $grid->find_first('S');
+    $target = $grid->find_first('E');
 
-    $robot = $grid->find_first('@');
+    $queue = new \SplPriorityQueue();
+    $queue->setExtractFlags(SplPriorityQueue::EXTR_BOTH);
+    $queue->insert(new edge($start, E, []), 0);
+    $visited = [];
 
-    foreach ($movements as $step => $m) {
-        $robot = simulate($step, $grid, $robot, $m);
-        $grid->render(10);
-    }
+    $solutions = [];
+    foreach ($queue as $item) {
+        $edge = $item['data'];
+        $cost = -$item['priority'];
 
-    $boxes = $grid->find_all('O');
+        $pos = $edge->pos;
+        $dir = $edge->dir;
+        $path = $edge->path;
 
-    $gps = [];
-    foreach ($boxes as $box) {
-        $gps[] = 100 * $box->y + $box->x;
-    }
+        $path[] = $edge->pos;
 
-    return $gps;
-}
+        $visited[(string) $edge] = true;
 
-function double_grid(grid $grid): grid
-{
-    $grid2 = [];
-    foreach ($grid->grid as $row) {
-        $line = [];
-        foreach (str_split($row) as $chr) {
-            if ($chr == 'O') {
-                $line[] = '[';
-                $line[] = ']';
-            } elseif ($chr == '@') {
-                $line[] = '@';
-                $line[] = '.';
-            } else {
-                $line[] = $chr;
-                $line[] = $chr;
+        if ($pos->x == $target->x && $pos->y == $target->y) {
+            $solutions[] = compact('path', 'cost');
+        }
+
+        $check_next = [
+            (object) ['pos' => $pos->add($dir), 'dir' => $dir, 'cost' => 1],
+            (object) ['pos' => $pos, 'dir' => turn_left($dir), 'cost' => 1000],
+            (object) ['pos' => $pos, 'dir' => turn_right($dir), 'cost' => 1000],
+        ];
+
+        foreach ($check_next as $check) {
+            $val = $grid->get($check->pos);
+
+            $new_edge = new edge($check->pos, $check->dir, $path);
+            if (!empty($visited[(string) $new_edge])) {
+                continue;
+            }
+
+            if ($val === '.' || $val === 'S' || $val === 'E') {
+                $queue->insert($new_edge, -($cost + $check->cost));
             }
         }
-        $grid2[] = implode('', $line);
     }
 
-    return new grid($grid2);
+    return $solutions;
 }
 
-function part2(array $input)
+function part1($grid)
 {
-    extract($input);
+    $solutions = shortest_paths($grid);
+    return [min(array_column($solutions, 'cost'))];
+}
 
-    $grid = double_grid($grid);
-    $robot = $grid->find_first('@');
+function part2($grid)
+{
+    $solutions = shortest_paths($grid);
+    $cost = min(array_column($solutions, 'cost'));
 
-    foreach ($movements as $step => $m) {
-        $robot = simulate2($step, $grid, $robot, $m);
-        $grid->render(100);
+    foreach ($solutions as $item) {
+        if ($item['cost'] != $cost) {
+            continue;
+        }
+
+        foreach ($item['path'] as $pos) {
+            $grid->set($pos, 'o');
+            $grid->render(10);
+        }
     }
 
-    $boxes = $grid->find_all('[');
-
-    $gps = [];
-    foreach ($boxes as $box) {
-        $gps[] = 100 * $box->y + $box->x;
-    }
-
-    vecho::$verbose = false;
-
-    return $gps;
+    return [count(iterator_to_array($grid->find_all('o')))];
 }
 
 function main(string $filename, bool $part2)
@@ -281,11 +137,16 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example1', false, 2028);
-run_part1('example', false, 10092);
+run_part1('kuno1', false, 1004);
+run_part1('kuno', false, 1007);
+run_part1('example', false, 7036);
+run_part1('example2', false, 21148);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', true, 9021);
-run_part2('input', false, 1582688);
+run_part2('kuno1', false, 5);
+run_part2('kuno', false, 8);
+run_part2('example', false, 45);
+run_part2('example2', false, 149);
+run_part2('input', false, 465);
 echo "\n";

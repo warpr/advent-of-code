@@ -68,6 +68,22 @@ const SW = new pos(-1, 1, 'south-west');
 const W = new pos(-1, 0, 'west');
 const NW = new pos(-1, -1, 'north-west');
 
+function dir_to_pointer(pos $dir)
+{
+    switch ($dir) {
+        case N:
+            return '^';
+        case E:
+            return '>';
+        case S:
+            return 'v';
+        case W:
+            return '<';
+        default:
+            return '!';
+    }
+}
+
 function turn_right(pos $dir)
 {
     switch ($dir) {
