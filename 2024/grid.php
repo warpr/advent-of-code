@@ -139,6 +139,16 @@ class grid
         $this->grid = $grid;
     }
 
+    static function create($size_x, $size_y, $fill = '.')
+    {
+        $line = str_repeat($fill, $size_x);
+        $ret = [];
+        for ($i = 0; $i < $size_y; $i++) {
+            $ret[] = $line;
+        }
+        return new grid($ret);
+    }
+
     function get(pos $pos, $default = null)
     {
         if ($pos->x < 0 || $pos->x >= $this->size_x || $pos->y < 0 || $pos->y >= $this->size_y) {
@@ -253,5 +263,19 @@ class grid
         }
 
         usleep($sleep * 1000);
+    }
+
+    function debounced_render()
+    {
+        static $prev = 0;
+        $seconds = 1;
+
+        if (time() - $prev < $seconds) {
+            return;
+        }
+
+        $this->render(0);
+
+        $prev = time();
     }
 }
