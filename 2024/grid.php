@@ -169,6 +169,14 @@ class grid
         return true;
     }
 
+    function draw_filled_rectangle(pos $top_left, pos $bottom_right, string $val) {
+        for ($x = $top_left->x; $x < $bottom_right->x; $x++) {
+            for ($y = $top_left->y; $y < $bottom_right->y; $y++) {
+                $this->grid[$y][$x] = $val;
+            }
+        }
+    }
+
     function is_val($pos, $val)
     {
         return $this->get($pos->x, $pos->y) === $val;

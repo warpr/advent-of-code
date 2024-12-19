@@ -10,7 +10,7 @@
 
 declare(strict_types=1);
 
-ini_set('memory_limit', '4096M');
+ini_set('memory_limit', '28672M');
 
 require_once __DIR__ . '/common.php';
 
@@ -165,7 +165,7 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 22);
+// run_part1('example', true, 22);
 run_part1('input', true);
 echo "\n";
 
