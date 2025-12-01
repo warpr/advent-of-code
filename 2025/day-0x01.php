@@ -63,33 +63,6 @@ function apply_rotations($data)
         if ($current === 0) {
             $count++;
         }
-
-        /*
-        vecho::msg("OP      {$line} \t=> {$current} \t(clicks {$clicks})");
-
-        if ($current == 0) {
-            $count++;
-            $clicks++;
-            vecho::msg("0 CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
-            continue;
-        }
-
-        while ($current < 0) {
-            $current += 100;
-            $clicks++;
-            vecho::msg("L CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
-        }
-
-        while ($current > 99) {
-            $current -= 100;
-            $clicks++;
-            vecho::msg("R CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
-        }
-
-        if ($current == 0) {
-            $count++;
-        }
-        */
     }
 
     if ($current === 0) {
@@ -111,6 +84,10 @@ function part1($data)
 function part2($data)
 {
     $debug = [
+        // Be careful: if the dial were pointing at 50, a single
+        // rotation like R1000 would cause the dial to point at
+        // 0 ten times before returning back to 50!
+
         ['try' => ['R1000'], 'expected' => 10],
         ['try' => ['R50', 'L100'], 'expected' => 2],
         ['try' => ['R50', 'L200'], 'expected' => 3],
@@ -127,10 +104,6 @@ function part2($data)
     }
 
     echo "\n";
-
-    // Be careful: if the dial were pointing at 50, a single
-    // rotation like R1000 would cause the dial to point at
-    // 0 ten times before returning back to 50!
 
     $result = apply_rotations($data);
 
