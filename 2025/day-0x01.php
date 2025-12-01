@@ -1,4 +1,12 @@
 <?php
+/**
+ *   Copyright (C) 2024  Kuno Woudt <kuno@frob.nl>
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of copyleft-next 0.3.1.  See copyleft-next-0.3.1.txt.
+ *
+ *   SPDX-License-Identifier: copyleft-next-0.3.1
+ */
 
 declare(strict_types=1);
 
@@ -13,7 +21,7 @@ function parse(string $filename, bool $verbose, bool $part2)
         $ret[] = trim($line);
     }
 
-    return [ $ret ];
+    return [$ret];
 }
 
 function part1($data)
@@ -46,12 +54,12 @@ function part1($data)
         }
     }
 
-    return [ $count ];
+    return [$count];
 }
 
 function part2($data)
 {
-    return [ 5 ];
+    return [5];
 }
 
 function main(string $filename, bool $part2)
@@ -95,7 +103,6 @@ The dial is rotated R14 to point at 14.
 The dial is rotated L82 to point at 32.
 Because the dial points at 0 a total of three times during this process, the password in this example is 3.
 */
-
 
 run_part1('example', false, 3);
 run_part1('input', false);

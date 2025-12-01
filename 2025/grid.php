@@ -15,9 +15,8 @@ class pos implements JsonSerializable
     function __construct(
         public readonly int $x,
         public readonly int $y,
-        public readonly string $name = ''
-    ) {
-    }
+        public readonly string $name = '',
+    ) {}
 
     function add(pos $pos)
     {

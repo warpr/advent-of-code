@@ -14,9 +14,7 @@ class node
 {
     public array $links = [];
 
-    public function __construct(public string $name = '', public object $extra)
-    {
-    }
+    public function __construct(public string $name = '', public object $extra) {}
 
     public function add_link(node $n, int $cost)
     {
