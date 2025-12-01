@@ -24,42 +24,117 @@ function parse(string $filename, bool $verbose, bool $part2)
     return [$ret];
 }
 
-function part1($data)
+function apply_rotations($data)
 {
     $current = 50;
     $count = 0;
+    $clicks = 0;
+    $end_click = false;
+
+    vecho::msg("START        \t=> {$current} \t(clicks {$clicks}, count {$count})");
 
     foreach ($data as $line) {
         $op = substr($line, 0, 1);
         $val = substr(trim($line), 1);
 
-        if ($op === 'L') {
-            $current -= $val;
-        } else {
-            $current += $val;
-        }
+        while ($val > 0) {
+            if ($current === 0) {
+                vecho::msg(
+                    "LINE {$line} (val {$val}) \t=> {$current} \t(clicks {$clicks}, count {$count})",
+                );
+                $clicks++;
+            }
 
-        while ($current < 0) {
-            $current += 100;
-        }
-        while ($current > 99) {
-            $current -= 100;
+            $val--;
+            if ($op === 'L') {
+                $current--;
+            } else {
+                $current++;
+            }
+
+            if ($current > 99) {
+                $current -= 100;
+            }
+            if ($current < 0) {
+                $current += 100;
+            }
         }
 
         if ($current === 0) {
             $count++;
-            vecho::msg("ZERO {$line} \t=> {$current}");
-        } else {
-            vecho::msg("val  {$line} \t=> {$current}");
         }
+
+        /*
+        vecho::msg("OP      {$line} \t=> {$current} \t(clicks {$clicks})");
+
+        if ($current == 0) {
+            $count++;
+            $clicks++;
+            vecho::msg("0 CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
+            continue;
+        }
+
+        while ($current < 0) {
+            $current += 100;
+            $clicks++;
+            vecho::msg("L CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
+        }
+
+        while ($current > 99) {
+            $current -= 100;
+            $clicks++;
+            vecho::msg("R CLICK {$line} \t=> {$current} \t(clicks {$clicks})");
+        }
+
+        if ($current == 0) {
+            $count++;
+        }
+        */
     }
 
-    return [$count];
+    if ($current === 0) {
+        $clicks++;
+    }
+
+    vecho::msg("END          \t=> {$current} \t(clicks {$clicks}, count {$count})");
+
+    return (object) compact('count', 'clicks');
+}
+
+function part1($data)
+{
+    $result = apply_rotations($data);
+
+    return [$result->count];
 }
 
 function part2($data)
 {
-    return [5];
+    $debug = [
+        ['try' => ['R1000'], 'expected' => 10],
+        ['try' => ['R50', 'L100'], 'expected' => 2],
+        ['try' => ['R50', 'L200'], 'expected' => 3],
+    ];
+
+    foreach ($debug as $scenario) {
+        $actual = apply_rotations($scenario['try']);
+
+        if ($actual->clicks != $scenario['expected']) {
+            echo 'Broke ' . implode(' ', $scenario['try']) . "\n";
+            exit(0);
+        }
+        vecho::msg(' --- ');
+    }
+
+    echo "\n";
+
+    // Be careful: if the dial were pointing at 50, a single
+    // rotation like R1000 would cause the dial to point at
+    // 0 ten times before returning back to 50!
+
+    $result = apply_rotations($data);
+
+    return [$result->clicks];
 }
 
 function main(string $filename, bool $part2)
@@ -79,35 +154,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-// So, if the dial were pointing at 11, a rotation of R8
-// would cause the dial to point at 19. After that, a
-// rotation of L19 would cause it to point at 0.
-
-// So, if the dial were pointing at 5, a rotation of L10
-// would cause it to point at 95. After that, a rotation
-// of R5 could cause it to point at 0.
-
-/*
-Following these rotations would cause the dial to move as follows:
-
-The dial starts by pointing at 50.
-The dial is rotated L68 to point at 82.
-The dial is rotated L30 to point at 52.
-The dial is rotated R48 to point at 0.
-The dial is rotated L5 to point at 95.
-The dial is rotated R60 to point at 55.
-The dial is rotated L55 to point at 0.
-The dial is rotated L1 to point at 99.
-The dial is rotated L99 to point at 0.
-The dial is rotated R14 to point at 14.
-The dial is rotated L82 to point at 32.
-Because the dial points at 0 a total of three times during this process, the password in this example is 3.
-*/
-
 run_part1('example', false, 3);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 31);
-// run_part2('input', false);
+run_part2('example', false, 6);
+run_part2('input', false);
 echo "\n";
