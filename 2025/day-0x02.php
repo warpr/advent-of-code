@@ -23,7 +23,7 @@ function parse(string $filename, bool $verbose, bool $part2)
     }
 }
 
-function is_invalid(int $id)
+function is_invalid_part1(int $id)
 {
     $id_str = "{$id}";
     $digit_count = strlen($id_str);
@@ -36,6 +36,7 @@ function is_invalid(int $id)
     for ($i = 1; $i <= $max_length; $i++) {
         $segment = substr($id_str, 0, $i);
         $repeated = str_repeat($segment, 2);
+
         if (str_starts_with($repeated, $id_str)) {
             vecho::msg("$id_str. MATCH {$repeated}");
             return true;
@@ -47,13 +48,35 @@ function is_invalid(int $id)
     return false;
 }
 
-function check_range(int $start_id, int $end_id)
+function is_invalid_part2(int $id)
 {
-    for ($i = $start_id; $i <= $end_id; $i++) {
-        if (is_invalid($i)) {
-            yield $i;
+    if ($id < 10) {
+        return false;
+    }
+
+    $id_str = "{$id}";
+    $digit_count = strlen($id_str);
+
+    $all_same_digit = str_repeat($id_str[0], $digit_count);
+    if ($all_same_digit === $id_str) {
+        return true;
+    }
+
+    $max_length = $digit_count >> 1;
+
+    for ($i = 1; $i <= $max_length; $i++) {
+        $segment = substr($id_str, 0, $i);
+
+        for ($j = 2; $j <= $max_length; $j++) {
+            $repeated = str_repeat($segment, $j);
+            if ($id_str === $repeated) {
+                vecho::msg("$id_str. MATCH ($j repetitions of {$segment}) {$repeated}");
+                return true;
+            }
         }
     }
+
+    return false;
 }
 
 function part1($data)
@@ -63,8 +86,10 @@ function part1($data)
     foreach ($data as $range) {
         [$start_id, $end_id] = explode('-', $range);
 
-        foreach (check_range((int) $start_id, (int) $end_id) as $invalid) {
-            $invalid_ids[] = $invalid;
+        for ($i = (int) $start_id; $i <= (int) $end_id; $i++) {
+            if (is_invalid_part1($i)) {
+                $invalid_ids[] = $i;
+            }
         }
     }
 
@@ -73,7 +98,19 @@ function part1($data)
 
 function part2($data)
 {
-    return [23];
+    $invalid_ids = [];
+
+    foreach ($data as $range) {
+        [$start_id, $end_id] = explode('-', $range);
+
+        for ($i = (int) $start_id; $i <= (int) $end_id; $i++) {
+            if (is_invalid_part2($i)) {
+                $invalid_ids[] = $i;
+            }
+        }
+    }
+
+    return $invalid_ids;
 }
 
 function main(string $filename, bool $part2)
@@ -93,10 +130,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 1227775554);
+run_part1('example', false, 1227775554);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 6);
+run_part2('example', false, 4174379265);
 run_part2('input', false);
 echo "\n";
