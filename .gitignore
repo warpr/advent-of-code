@@ -9,3 +9,4 @@
 /composer.phar
 /vendor/
 /etc/config.json
+*.input.txt

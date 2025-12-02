@@ -1,3 +1,26 @@
 #!/bin/sh
 
+# Auto-encrypt puzzle inputs before committing
+# Get all staged .input.txt files
+STAGED_INPUTS=$(git diff --cached --name-only --diff-filter=ACM | grep '\.input\.txt$' || true)
+
+if [ -n "$STAGED_INPUTS" ]; then
+    echo "Encrypting staged puzzle inputs..."
+    echo "$STAGED_INPUTS" | while read -r file; do
+        if [ -f "$file" ]; then
+            # Encrypt the file (this will remove the .input.txt and create .input.encrypted)
+            bin/encrypt "$file"
+
+            # Get the encrypted filename
+            encrypted="${file%.input.txt}.input.encrypted"
+
+            # Unstage the .input.txt file and stage the .input.encrypted file
+            git reset HEAD "$file" 2>/dev/null || true
+            git add "$encrypted"
+
+            echo "  Encrypted and staged: $encrypted"
+        fi
+    done
+fi
+
 npx --no-install lint-staged
