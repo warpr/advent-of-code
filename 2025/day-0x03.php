@@ -36,17 +36,32 @@ function find_highest_digit_pos(string $str)
     return 0;
 }
 
+function find_largest_stuff(string $bank, int $offset, int $count)
+{
+    if (empty($count)) {
+        return '';
+    }
+
+    if ($count > 1) {
+        $search = substr($bank, $offset, 1 - $count);
+    } else {
+        $search = substr($bank, $offset);
+    }
+
+    $pos = $offset + find_highest_digit_pos($search);
+
+    vecho::msg("[$bank] $offset // $search found $pos");
+
+    return $bank[$pos] . find_largest_stuff($bank, $pos + 1, $count - 1);
+}
+
 function part1($data)
 {
     $ret = [];
 
     foreach ($data as $bank) {
-        $search1 = substr($bank, 0, -1);
-        $pos1 = find_highest_digit_pos($search1);
-        $search2 = substr($bank, $pos1 + 1);
-        $pos2 = $pos1 + 1 + find_highest_digit_pos($search2);
-        vecho::msg("[$bank] found pos {$pos1} in {$search1} and pos {$pos2} in {$search2}");
-        $ret[] = (int) "{$bank[$pos1]}{$bank[$pos2]}";
+        $str = find_largest_stuff($bank, 0, 2);
+        $ret[] = (int) $str;
     }
 
     // 98 + 89 + 78 + 92 = 357
@@ -56,7 +71,14 @@ function part1($data)
 
 function part2($data)
 {
-    return [23];
+    $ret = [];
+
+    foreach ($data as $bank) {
+        $str = find_largest_stuff($bank, 0, 12);
+        $ret[] = (int) $str;
+    }
+
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -76,7 +98,7 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 357);
+run_part1('example', false, 357);
 run_part1('input', false);
 echo "\n";
 
