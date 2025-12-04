@@ -24,6 +24,24 @@ function parse(string $filename, bool $verbose, bool $part2)
     return [$ret];
 }
 
+function can_be_accessed(grid $grid, pos $pos): bool
+{
+    $neighbours = implode('', [
+        $grid->get($pos->add(N)),
+        $grid->get($pos->add(NE)),
+        $grid->get($pos->add(E)),
+        $grid->get($pos->add(SE)),
+        $grid->get($pos->add(S)),
+        $grid->get($pos->add(SW)),
+        $grid->get($pos->add(W)),
+        $grid->get($pos->add(NW)),
+    ]);
+
+    $count = substr_count($neighbours, '@');
+
+    return $count < 4;
+}
+
 function part1($data)
 {
     $grid = new grid($data);
@@ -35,33 +53,45 @@ function part1($data)
             continue;
         }
 
-        $neighbours = implode('', [
-            $grid->get($item->pos->add(N)),
-            $grid->get($item->pos->add(NE)),
-            $grid->get($item->pos->add(E)),
-            $grid->get($item->pos->add(SE)),
-            $grid->get($item->pos->add(S)),
-            $grid->get($item->pos->add(SW)),
-            $grid->get($item->pos->add(W)),
-            $grid->get($item->pos->add(NW)),
-        ]);
-
-        $count = substr_count($neighbours, '@');
-        if ($count < 4) {
+        if (can_be_accessed($grid, $item->pos)) {
             $ret[] = 1;
         }
-
-        vecho::msg(
-            "{$item->pos->y},{$item->pos->x} {$item->val} neigbours: {$count} {$neighbours}",
-        );
     }
 
     return $ret;
 }
 
+function find_rolls_to_remove(grid $grid)
+{
+    $to_remove = [];
+
+    foreach ($grid->walk() as $item) {
+        if ($item->val != '@') {
+            continue;
+        }
+
+        if (can_be_accessed($grid, $item->pos)) {
+            $to_remove[] = $item->pos;
+        }
+    }
+
+    return $to_remove;
+}
+
 function part2($data)
 {
     $ret = [];
+
+    $grid = new grid($data);
+
+    do {
+        $rolls = find_rolls_to_remove($grid);
+        $ret[] = count($rolls);
+
+        foreach ($rolls as $remove) {
+            $grid->set($remove, '.');
+        }
+    } while (!empty($rolls));
 
     return $ret;
 }
@@ -83,10 +113,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 13);
+run_part1('example', false, 13);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 3121910778619);
+run_part2('example', true, 43);
 run_part2('input', false);
 echo "\n";
