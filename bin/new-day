@@ -71,11 +71,11 @@ function request(string $method, string $url, array $headers, $body = null) {
 function main() {
     $root = dirname(__DIR__);
 
-    $config_str = @file_get_contents(__DIR__ . '/config.json');
+    $config_str = @file_get_contents($root . '/etc/config.json');
     $config = @json_decode($config_str);
 
     if (empty($config)) {
-        echo "Could not read configuration, please create bin/config.json\n";
+        echo "Could not read configuration, please create etc/config.json\n";
     }
 
     $today = new DateTime();

@@ -1,0 +1,123 @@
+#!/bin/sh
+# Encrypt/decrypt Advent of Code puzzle inputs
+# Copyright 2025 Kuno Woudt <kuno@frob.nl>
+# SPDX-License-Identifier: copyleft-next-0.3.1
+
+set -e
+
+# Determine script directory and root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+CONFIG_FILE="$ROOT_DIR/etc/config.json"
+
+# Read password from config
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "Error: Config file not found at $CONFIG_FILE"
+    exit 1
+fi
+
+PASSWORD=$(grep -o '"password"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG_FILE" | sed 's/.*"\([^"]*\)".*/\1/')
+
+if [ -z "$PASSWORD" ]; then
+    echo "Error: Password not found in config file"
+    exit 1
+fi
+
+# Determine operation mode based on script name
+SCRIPT_NAME="$(basename "$0")"
+if [ "$SCRIPT_NAME" = "encrypt" ]; then
+    MODE="encrypt"
+elif [ "$SCRIPT_NAME" = "decrypt" ]; then
+    MODE="decrypt"
+else
+    echo "Error: Script must be called as 'encrypt' or 'decrypt'"
+    exit 1
+fi
+
+# Encrypt a single file
+encrypt_file() {
+    local input="$1"
+    local output="${input%.input.txt}.input.encrypted"
+
+    if [ ! -f "$input" ]; then
+        echo "Error: File not found: $input"
+        return 1
+    fi
+
+    echo "Encrypting: $input -> $output"
+    openssl enc -aes-256-cbc -salt -pbkdf2 -in "$input" -out "$output" -pass "pass:$PASSWORD"
+
+    # Remove the original unencrypted file
+    rm "$input"
+}
+
+# Decrypt a single file
+decrypt_file() {
+    local input="$1"
+    local output="${input%.input.encrypted}.input.txt"
+
+    if [ ! -f "$input" ]; then
+        echo "Error: File not found: $input"
+        return 1
+    fi
+
+    echo "Decrypting: $input -> $output"
+    openssl enc -aes-256-cbc -d -pbkdf2 -in "$input" -out "$output" -pass "pass:$PASSWORD"
+}
+
+# Process a directory
+process_directory() {
+    local dir="$1"
+
+    if [ ! -d "$dir" ]; then
+        echo "Error: Directory not found: $dir"
+        return 1
+    fi
+
+    if [ "$MODE" = "encrypt" ]; then
+        # Find all .input.txt files
+        find "$dir" -name "*.input.txt" -type f | while read -r file; do
+            encrypt_file "$file"
+        done
+    else
+        # Find all .input.encrypted files
+        find "$dir" -name "*.input.encrypted" -type f | while read -r file; do
+            decrypt_file "$file"
+        done
+    fi
+}
+
+# Main logic
+if [ $# -eq 0 ]; then
+    echo "Usage: $SCRIPT_NAME <file-or-directory> [...]"
+    echo ""
+    echo "Examples:"
+    echo "  $SCRIPT_NAME 2024/day-0x01.input.txt"
+    echo "  $SCRIPT_NAME 2024"
+    echo "  $SCRIPT_NAME 2023 2024 2025"
+    echo "  $SCRIPT_NAME ."
+    exit 1
+fi
+
+# Process each argument
+for arg in "$@"; do
+    # Remove trailing slash if present
+    arg="${arg%/}"
+
+    if [ -f "$arg" ]; then
+        # It's a file
+        if [ "$MODE" = "encrypt" ]; then
+            encrypt_file "$arg"
+        else
+            decrypt_file "$arg"
+        fi
+    elif [ -d "$arg" ]; then
+        # It's a directory
+        process_directory "$arg"
+    else
+        echo "Error: Not found: $arg"
+        exit 1
+    fi
+done
+
+echo "Done!"
