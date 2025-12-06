@@ -61,7 +61,36 @@ function part1($ranges, $ingredients)
 
 function part2($ranges, $ingredients)
 {
-    return [23];
+    $fresh = [];
+
+    $ranges = sort_by($ranges, 'start');
+
+    $prev_end = 0;
+    foreach ($ranges as $range) {
+        $old_start = $range->start;
+        if ($range->start <= $prev_end) {
+            $range->start = $prev_end + 1;
+            vecho::msg("updated range {$old_start} -> {$range->start} // {$range->end}");
+
+            if ($range->start >= $range->end) {
+                // this range is empty
+                continue;
+            }
+        } else {
+            vecho::msg("no changes to range {$range->start} // {$range->end}");
+        }
+        $prev_end = $range->end;
+
+        $fresh[] = $range;
+    }
+
+    $ret = [];
+    foreach ($fresh as $range) {
+        vecho::msg("new range {$range->start} // {$range->end}");
+        $ret[] = $range->end + 1 - $range->start;
+    }
+
+    return $ret;
 }
 
 function main(string $filename, bool $part2)
@@ -81,10 +110,10 @@ function main(string $filename, bool $part2)
     return array_sum($values);
 }
 
-run_part1('example', true, 3);
+run_part1('example', false, 3);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 43);
+run_part2('example', false, 14);
 run_part2('input', false);
 echo "\n";
