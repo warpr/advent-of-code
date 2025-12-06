@@ -39,7 +39,12 @@ function parse(string $filename, bool $verbose, bool $part2)
         $problems[] = $problem;
     }
 
-    $ret = [];
+    return [$problems];
+}
+
+function part1($problems)
+{
+    $data = [];
     foreach ($problems as $problem) {
         $current = [];
         foreach ($problem as $idx => $columns) {
@@ -48,14 +53,9 @@ function parse(string $filename, bool $verbose, bool $part2)
                 @$current[$y] .= $columns[$y];
             }
         }
-        $ret[] = $current;
+        $data[] = $current;
     }
 
-    return [$ret];
-}
-
-function part1($data)
-{
     $ret = [];
 
     foreach ($data as $problem) {
@@ -81,7 +81,39 @@ function part1($data)
 
 function part2($data)
 {
-    $ret = 23;
+    $ret = [];
+
+    foreach ($data as $problem) {
+        $operation = '';
+        $values = [];
+        foreach ($problem as $line) {
+            $line = trim($line);
+            if (!is_numeric($line)) {
+                $operation = substr($line, -1);
+                $line = trim(substr($line, 0, -1));
+            }
+
+            $values[] = $line;
+        }
+
+        $result = null;
+        if ($operation === '+') {
+            $result = array_sum($values);
+        } elseif ($operation === '*') {
+            $result = array_product($values);
+        } else {
+            continue;
+        }
+
+        $ret[] = $result;
+    }
+
+    /*
+    The rightmost problem is 4 + 431 + 623 = 1058
+    The second problem from the right is 175 * 581 * 32 = 3253600
+    The third problem from the right is 8 + 248 + 369 = 625
+    Finally, the leftmost problem is 356 * 24 * 1 = 8544
+*/
 
     return $ret;
 }
@@ -107,6 +139,6 @@ run_part1('example', true, 4277556);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', false, 14);
-// run_part2('input', false);
+run_part2('example', true, 3263827);
+run_part2('input', false);
 echo "\n";
