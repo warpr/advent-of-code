@@ -86,7 +86,69 @@ function part2($data)
 {
     $grid = new grid($data);
 
-    return [23];
+    $pos = $grid->find_first('S');
+
+    $beams = [];
+    $final_beams = [];
+
+    $beams["{$pos}"] = ['pos' => $pos, 'count' => 1];
+
+    foreach ($grid->grid as $y => $line) {
+        $old_beams = $beams;
+        $beams = [];
+
+        foreach ($old_beams as $quantum_beam) {
+            $beam = $quantum_beam['pos'];
+
+            $s_pos = $beam->add(S);
+            $s = $grid->get($s_pos);
+
+            if ($s === null) {
+                $final_beams = $old_beams;
+                // end of grid
+                break;
+            }
+
+            if ($s === '.') {
+                $grid->set($s_pos, '|');
+                $beams["{$s_pos}"] = ['pos' => $s_pos, 'count' => $quantum_beam['count']];
+                continue;
+            }
+
+            if ($s === '|') {
+                // a beam has appeared under us, I guess that's OK
+                $beams["{$s_pos}"]['count'] += $quantum_beam['count'];
+                continue;
+            }
+
+            if ($s !== '^') {
+                $grid->render();
+                echo "[ERROR] Unexpected situation! ({$s} at {$s_pos}\n";
+                exit(1);
+            }
+
+            $sw_pos = $beam->add(SW);
+            $se_pos = $beam->add(SE);
+
+            if ($grid->get($sw_pos) === '|') {
+                $beams["{$sw_pos}"]['count'] += $quantum_beam['count'];
+            } else {
+                $grid->set($sw_pos, '|');
+                $beams["{$sw_pos}"] = ['pos' => $sw_pos, 'count' => $quantum_beam['count']];
+            }
+
+            if ($grid->get($se_pos) === '|') {
+                $beams["{$se_pos}"]['count'] += $quantum_beam['count'];
+            } else {
+                $grid->set($se_pos, '|');
+                $beams["{$se_pos}"] = ['pos' => $se_pos, 'count' => $quantum_beam['count']];
+            }
+        }
+    }
+
+    $grid->render();
+
+    return array_column($final_beams, 'count');
 }
 
 function main(string $filename, bool $part2)
@@ -110,6 +172,6 @@ run_part1('example', true, 21);
 run_part1('input', false);
 echo "\n";
 
-run_part2('example', false, 23);
+run_part2('example', true, 40);
 run_part2('input', false);
 echo "\n";
