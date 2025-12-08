@@ -31,16 +31,17 @@ class vecho
         }
     }
 
-    static function debounced_msg($seconds, ...$args)
+    static function debounced_msg($seconds, ...$args): bool
     {
         static $prev = 0;
 
         if (time() - $prev < $seconds) {
-            return;
+            return false;
         }
 
         static::msg(...$args);
 
         $prev = time();
+        return true;
     }
 }

@@ -60,24 +60,11 @@ function all_distances(array $data)
 
     $sorted = sort_by($distances, 'len');
 
-    /*
-    foreach ($sorted as $s) {
-        vecho::msg("Sorted " . $s["len"]
-            . " from " . implode(",", $s["src"])
-            . " to " . implode(",", $s["dst"]));
-    }
-    */
-
     return $sorted;
 }
 
-function part1($data)
+function connections(array $data, int $max)
 {
-    $max = 10;
-    if (count($data) > 500) {
-        $max = 1000;
-    }
-
     $boxes_in_circuits = [];
     foreach ($data as $box) {
         $key = implode(',', $box);
@@ -89,7 +76,25 @@ function part1($data)
 
     print_memory();
 
-    for ($i = 0; $i < $max; $i++) {
+    $cable_count = count($sorted);
+
+    $i = 0;
+    while (!empty($sorted)) {
+        if ($max && $i >= $max) {
+            break;
+        }
+        $i++;
+
+        if (
+            vecho::debounced_msg(
+                5,
+                'Connecting cables, ' . count($sorted) . " cables left, $i cables checked",
+            )
+        ) {
+            print_memory();
+            display_percentage('connecting...', 0, $cable_count, $i);
+        }
+
         $cable = array_shift($sorted);
 
         $src_str = implode(',', $cable['src']);
@@ -161,6 +166,22 @@ function part1($data)
         }
     }
 
+    $last_circuit = array_pop($circuits);
+    $last_cable = array_pop($last_circuit);
+
+    return compact('sizes', 'last_cable');
+}
+
+function part1($data)
+{
+    $max = 10;
+    if (count($data) > 500) {
+        $max = 1000;
+    }
+
+    $result = connections($data, $max);
+    $sizes = $result['sizes'];
+
     rsort($sizes);
 
     return [$sizes[0], $sizes[1], $sizes[2]];
@@ -168,7 +189,11 @@ function part1($data)
 
 function part2($data)
 {
-    return [23];
+    $result = connections($data, 0);
+
+    $last_cable = $result['last_cable'];
+
+    return [$last_cable['src'][0], $last_cable['dst'][0]];
 }
 
 function main(string $filename, bool $part2)
@@ -192,6 +217,6 @@ run_part1('example', false, 40);
 run_part1('input', false);
 echo "\n";
 
-// run_part2('example', true, 40);
-// run_part2('input', false);
+run_part2('example', true, 25272);
+run_part2('input', true);
 echo "\n";
