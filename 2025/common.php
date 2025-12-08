@@ -24,6 +24,15 @@ function flatten(array $array)
     return array_merge(...$array);
 }
 
+function print_memory()
+{
+    $mb = memory_get_usage() >> 20;
+
+    echo "[MEMORY] current memory in use is {$mb} MB\n";
+
+    usleep(10);
+}
+
 function memoize(callable $fn): callable
 {
     return function (...$args) use ($fn) {
